@@ -16,16 +16,18 @@
 
 package com.rabbitmq.client.test.functional;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.util.Arrays;
-
-import org.junit.Test;
-
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.client.test.TestUtils;
+
+import org.junit.Test;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
+import static org.junit.Assert.assertEquals;
 
 
 //
@@ -77,15 +79,17 @@ public class InternalExchange extends BrokerTestCase
             throws IOException
     {
         byte[] testDataBody = "test-data".getBytes();
+        InputStream input1 = new ByteArrayInputStream(testDataBody);
 
         // We should be able to publish to the non-internal exchange as usual
         // and see our message land in the queue...
-        channel.basicPublish("e0", "", null, testDataBody);
+        channel.basicPublish("e0", "", null, input1, input1.available());
         GetResponse r = channel.basicGet("q1", true);
-        assertTrue(Arrays.equals(r.getBody(), testDataBody));
+        assertEquals(TestUtils.readString(r.getBody()), new String(testDataBody));
 
         // Publishing to the internal exchange will not be allowed...
-        channel.basicPublish("e1", "", null, testDataBody);
+        InputStream input2 = new ByteArrayInputStream(testDataBody);
+        channel.basicPublish("e1", "", null, input2, input2.available());
 
         expectError(AMQP.ACCESS_REFUSED);
     }

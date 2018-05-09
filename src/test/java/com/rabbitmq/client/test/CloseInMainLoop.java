@@ -17,7 +17,9 @@ package com.rabbitmq.client.test;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -111,12 +113,13 @@ public class CloseInMainLoop extends BrokerTestCase{
         public void handleDelivery(String consumerTag,
                                    Envelope envelope,
                                    AMQP.BasicProperties properties,
-                                   byte[] body) {
+                                   InputStream body) {
             throw new RuntimeException("I am a bad consumer");
         }
     });
 
-    channel.basicPublish("x", "k", null, new byte[10]);
+    InputStream input = new ByteArrayInputStream(new byte[10]);
+    channel.basicPublish("x", "k", null, input, input.available());
 
     assertTrue(closeLatch.await(1000, TimeUnit.MILLISECONDS));
     assertTrue(connection.hadValidShutdown());

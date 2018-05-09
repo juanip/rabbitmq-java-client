@@ -25,7 +25,10 @@ import com.rabbitmq.client.test.TestUtils;
 import org.junit.Test;
 
 import javax.net.SocketFactory;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
 
 /**
@@ -181,7 +184,8 @@ public class UnexpectedFrames extends BrokerTestCase {
 
         //NB: the frame confuser relies on the encoding of the
         //method field to be at least 8 bytes long
-        channel.basicPublish("", "routing key", null, "Hello".getBytes());
+        InputStream input = new ByteArrayInputStream("Hello".getBytes());
+        channel.basicPublish("", "routing key", null, input, input.available());
         expectError(error);
     }
 

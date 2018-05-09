@@ -21,7 +21,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,8 +63,8 @@ public class QosTests extends BrokerTestCase
         throws IOException
     {
         for (int i = 0; i < n; i++) {
-            channel.basicPublish("amq.fanout", "", null,
-                                 Integer.toString(i).getBytes());
+            ByteArrayInputStream input = new ByteArrayInputStream(Integer.toString(i).getBytes());
+            channel.basicPublish("amq.fanout", "", null, input, input.available());
         }
     }
 
@@ -206,7 +208,7 @@ public class QosTests extends BrokerTestCase
                 @Override public void handleDelivery(String consumerTag,
                                                      Envelope envelope,
                                                      AMQP.BasicProperties properties,
-                                                     byte[] body)
+                                                     InputStream body)
                     throws IOException {
                     counts.put(consumerTag, counts.get(consumerTag) + 1);
                     super.handleDelivery(consumerTag, envelope,

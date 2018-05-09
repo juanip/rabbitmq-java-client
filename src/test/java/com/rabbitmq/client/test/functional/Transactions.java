@@ -20,7 +20,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
@@ -65,7 +67,8 @@ public class Transactions extends BrokerTestCase
     private void basicPublish()
         throws IOException
     {
-        channel.basicPublish("", Q, null, "Tx message".getBytes());
+        InputStream input = new ByteArrayInputStream("Tx message".getBytes());
+        channel.basicPublish("", Q, null, input, input.available());
     }
 
     private GetResponse basicGet(boolean noAck)

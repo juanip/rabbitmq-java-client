@@ -17,6 +17,10 @@ package com.rabbitmq.client.test;
 
 import com.rabbitmq.client.ConnectionFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 public class TestUtils {
 
     public static final boolean USE_NIO = System.getProperty("use.nio") == null ? false : true;
@@ -29,6 +33,25 @@ public class TestUtils {
             connectionFactory.useBlockingIo();
         }
         return connectionFactory;
+    }
+
+    public static InputStream getInputStreamMessage(String message) {
+       return new ByteArrayInputStream(message.getBytes());
+    }
+
+    public static String readString(InputStream input) throws IOException {
+        byte[] bytes = new byte[input.available()];
+        input.read(bytes);
+        input.close();
+        return new String(bytes);
+    }
+
+    public static String readStringQuietly(InputStream input) {
+        try {
+            return readString(input);
+        } catch (IOException e) {
+            return "";
+        }
     }
 
 }

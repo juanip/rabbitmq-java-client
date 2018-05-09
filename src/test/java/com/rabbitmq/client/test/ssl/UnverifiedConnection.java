@@ -20,6 +20,7 @@ import com.rabbitmq.client.test.BrokerTestCase;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -61,12 +62,14 @@ public class UnverifiedConnection extends BrokerTestCase {
     @Test public void sSL() throws IOException
     {
         channel.queueDeclare("Bug19356Test", false, true, true, null);
-        channel.basicPublish("", "Bug19356Test", null, "SSL".getBytes());
+        ByteArrayInputStream input = new ByteArrayInputStream("SSL".getBytes());
+        channel.basicPublish("", "Bug19356Test", null, input, input.available());
 
         GetResponse chResponse = channel.basicGet("Bug19356Test", false);
         assertNotNull(chResponse);
 
-        byte[] body = chResponse.getBody();
+        byte[] body = new byte[chResponse.getBody().available()];
+        chResponse.getBody().read(body);
         assertEquals("SSL", new String(body));
     }
     

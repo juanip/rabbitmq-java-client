@@ -26,7 +26,9 @@ import com.rabbitmq.client.test.TestUtils;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
@@ -92,11 +94,11 @@ public class QosScaling {
     }
 
     protected void publish(List<String> queues) throws IOException {
-        byte[] body = "".getBytes();
+        InputStream body = new ByteArrayInputStream("".getBytes());
         int messagesPerQueue = params.messageCount / queues.size();
         for (String queue : queues) {
             for (int i = 0; i < messagesPerQueue; i++) {
-                channel.basicPublish("", queue, null, body);
+                channel.basicPublish("", queue, null, body, body.available());
             }
         }
         //ensure that all the messages have reached the queues

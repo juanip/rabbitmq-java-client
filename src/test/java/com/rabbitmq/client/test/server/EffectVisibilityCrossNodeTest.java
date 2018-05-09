@@ -17,7 +17,9 @@ package com.rabbitmq.client.test.server;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.junit.Test;
 
@@ -49,13 +51,13 @@ public class EffectVisibilityCrossNodeTest extends ClusteredTestBase {
     private static final int BATCHES = 500;
     private static final int MESSAGES_PER_BATCH = 10;
 
-    private static final byte[] msg = "".getBytes();
+    private static final InputStream msg = new ByteArrayInputStream("".getBytes());
 
     @Test public void effectVisibility() throws Exception {
 
         for (int i = 0; i < BATCHES; i++) {
             for (int j = 0; j < MESSAGES_PER_BATCH; j++) {
-                channel.basicPublish("amq.fanout", "", null, msg);
+                channel.basicPublish("amq.fanout", "", null, msg, msg.available());
             }
             for (int j = 0; j < queues.length ; j++) {
                 assertEquals(MESSAGES_PER_BATCH, channel.queuePurge(queues[j]).getMessageCount());

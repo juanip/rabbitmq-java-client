@@ -19,12 +19,15 @@ package com.rabbitmq.client.test.functional;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
+import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.test.TestUtils;
 import org.junit.Test;
 
@@ -32,7 +35,6 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.impl.AMQCommand;
 import com.rabbitmq.client.impl.AMQConnection;
 import com.rabbitmq.client.impl.Frame;
@@ -65,12 +67,13 @@ public class FrameMax extends BrokerTestCase {
         String queueName = channel.queueDeclare().getQueue();
         /* This should result in at least 3 frames. */
         int howMuch = 2*FRAME_MAX;
-        basicPublishVolatile(new byte[howMuch], queueName);
+        InputStream input = new ByteArrayInputStream(new byte[howMuch]);
+        basicPublishVolatile(input, input.available(), queueName);
         /* Receive everything that was sent out. */
         while (howMuch > 0) {
             try {
                 GetResponse response = channel.basicGet(queueName, false);
-                howMuch -= response.getBody().length;
+                howMuch -= response.getBody().available();
             } catch (Exception e) {
                 e.printStackTrace();
                 fail("Exception in basicGet loop: " + e);
@@ -100,7 +103,8 @@ public class FrameMax extends BrokerTestCase {
         ConnectionFactory cf = new GenerousConnectionFactory();
         connection = cf.newConnection();
         openChannel();
-        basicPublishVolatile(new byte[connection.getFrameMax()], "void");
+        InputStream input = new ByteArrayInputStream(new byte[connection.getFrameMax()]);
+        basicPublishVolatile(input, input.available(), "void");
         expectError(AMQP.FRAME_ERROR);
     }
 

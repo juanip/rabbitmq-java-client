@@ -18,7 +18,9 @@ package com.rabbitmq.client.test.server;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,7 +53,7 @@ class RejectingConsumer extends DefaultConsumer {
 
     @Override
     public void handleDelivery(String consumerTag, Envelope envelope,
-                               AMQP.BasicProperties properties, byte[] body)
+                               AMQP.BasicProperties properties, InputStream body)
             throws IOException {
 
         if(this.latch.getCount() > 0) {
@@ -107,7 +109,8 @@ public class XDeathHeaderGrowth extends BrokerTestCase {
         RejectingConsumer cons = new RejectingConsumer(this.channel, latch);
         this.channel.basicConsume(qz, cons);
 
-        this.channel.basicPublish("", q1, null, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        this.channel.basicPublish("", q1, null, input, input.available());
         assertTrue(latch.await(5, TimeUnit.SECONDS));
         List<Map<String, Object>> events = (List<Map<String, Object>>)cons.getHeaders().get("x-death");
         assertEquals(4, events.size());
@@ -169,7 +172,8 @@ public class XDeathHeaderGrowth extends BrokerTestCase {
                                           "issues.rabbitmq-server-152.queue97",
                                           "issues.rabbitmq-server-152.queue98",
                                           "issues.rabbitmq-server-152.queue99")).build();
-        this.channel.basicPublish("", q1, props, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        this.channel.basicPublish("", q1, props, input, input.available());
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
         List<Map<String, Object>> events = (List<Map<String, Object>>)cons.getHeaders().get("x-death");

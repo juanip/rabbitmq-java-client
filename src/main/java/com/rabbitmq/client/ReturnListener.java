@@ -17,6 +17,7 @@
 package com.rabbitmq.client;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Implement this interface in order to be notified of failed
@@ -30,6 +31,6 @@ public interface ReturnListener {
             String exchange,
             String routingKey,
             AMQP.BasicProperties properties,
-            byte[] body)
+            InputStream body)
         throws IOException;
 }

@@ -18,12 +18,15 @@ package com.rabbitmq.client.test.functional;
 
 import static org.junit.Assert.assertNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.junit.Test;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.test.TestUtils;
 
 public class Reject extends AbstractRejectTest
 {
@@ -32,18 +35,18 @@ public class Reject extends AbstractRejectTest
     {
         String q = channel.queueDeclare("", false, true, false, null).getQueue();
 
-        byte[] m1 = "1".getBytes();
-        byte[] m2 = "2".getBytes();
+        InputStream m1  = TestUtils.getInputStreamMessage("1");
+        InputStream m2  = TestUtils.getInputStreamMessage("2");
 
-        basicPublishVolatile(m1, q);
-        basicPublishVolatile(m2, q);
+        basicPublishVolatile(m1, m1.available(), q);
+        basicPublishVolatile(m2, m2.available(), q);
 
-        long tag1 = checkDelivery(channel.basicGet(q, false), m1, false);
-        long tag2 = checkDelivery(channel.basicGet(q, false), m2, false);
+        long tag1 = checkDelivery(channel.basicGet(q, false), TestUtils.getInputStreamMessage("1"), false);
+        long tag2 = checkDelivery(channel.basicGet(q, false), TestUtils.getInputStreamMessage("2"), false);
         QueueingConsumer c = new QueueingConsumer(secondaryChannel);
         String consumerTag = secondaryChannel.basicConsume(q, false, c);
         channel.basicReject(tag2, true);
-        long tag3 = checkDelivery(c.nextDelivery(), m2, true);
+        long tag3 = checkDelivery(c.nextDelivery(), TestUtils.getInputStreamMessage("2"), true);
         secondaryChannel.basicCancel(consumerTag);
         secondaryChannel.basicReject(tag3, false);
         assertNull(channel.basicGet(q, false));

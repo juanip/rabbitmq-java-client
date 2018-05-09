@@ -24,7 +24,9 @@ import com.rabbitmq.client.test.TestUtils;
 import com.rabbitmq.tools.Host;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -184,7 +186,8 @@ public class Permissions extends BrokerTestCase
     {
         runTest(false, true, false, false, new WithName() {
                 public void with(String name) throws IOException {
-                    channel.basicPublish(name, "", null, "foo".getBytes());
+                    InputStream input = new ByteArrayInputStream("foo".getBytes());
+                    channel.basicPublish(name, "", null, input, input.available());
                     //followed by a dummy synchronous command in order
                     //to catch any errors
                     channel.basicQos(0);
@@ -294,7 +297,8 @@ public class Permissions extends BrokerTestCase
         );
         assertAccessRefused(new WithName() {
             public void with(String _e) throws IOException {
-                channel.basicPublish("write", "", null, "foo".getBytes());
+                InputStream input = new ByteArrayInputStream("foo".getBytes());
+                channel.basicPublish("write", "", null, input, input.available());
                 channel.basicQos(0);
             }
         }

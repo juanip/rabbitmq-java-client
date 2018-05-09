@@ -15,12 +15,11 @@
 
 package com.rabbitmq.client.impl;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.UnexpectedFrameError;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Class responsible for piecing together a command from a series of {@link Frame}s.
@@ -30,7 +29,6 @@ import com.rabbitmq.client.UnexpectedFrameError;
  * @see AMQCommand
  */
 final class CommandAssembler {
-    private static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     /** Current state, used to decide how to handle each incoming frame. */
     private enum CAState {
@@ -40,25 +38,27 @@ final class CommandAssembler {
 
     /** The method for this command */
     private Method method;
-    
+
     /** The content header for this command */
     private AMQContentHeader contentHeader;
 
-    /** The fragments of this command's content body - a list of byte[] */
-    private final List<byte[]> bodyN;
-    /** sum of the lengths of all fragments */
+    private final InputStream body;
+    private VolatileFileOutputStream accumulator;
+    /**
+     * sum of the lengths of all fragments
+     */
     private int bodyLength;
 
     /** No bytes of content body not yet accumulated */
     private long remainingBodyBytes;
 
-    public CommandAssembler(Method method, AMQContentHeader contentHeader, byte[] body) {
+    public CommandAssembler(Method method, AMQContentHeader contentHeader, InputStream body, int bodyLength) {
         this.method = method;
         this.contentHeader = contentHeader;
-        this.bodyN = new ArrayList<byte[]>(2);
-        this.bodyLength = 0;
+        this.bodyLength = bodyLength;
         this.remainingBodyBytes = 0;
-        appendBodyFragment(body);
+        this.body = body;
+
         if (method == null) {
             this.state = CAState.EXPECTING_METHOD;
         } else if (contentHeader == null) {
@@ -66,6 +66,16 @@ final class CommandAssembler {
         } else {
             this.remainingBodyBytes = contentHeader.getBodySize() - this.bodyLength;
             updateContentBodyState();
+        }
+
+        if (this.body != null) {
+            return;
+        }
+        try {
+            this.accumulator = new VolatileFileOutputStream();
+        }
+        catch (IOException e) {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -114,36 +124,38 @@ final class CommandAssembler {
             if (this.remainingBodyBytes < 0) {
                 throw new UnsupportedOperationException("%%%%%% FIXME unimplemented");
             }
-            appendBodyFragment(fragment);
-        } else {
+            try {
+                appendBodyFragment(fragment);
+            }
+            catch (IOException e) {
+                //TODO update exception
+                throw new UnsupportedOperationException("%%%%%% FIXME unimplemented");
+            }
+        }
+        else {
             throw new UnexpectedFrameError(f, AMQP.FRAME_BODY);
         }
     }
 
-    /** Stitches together a fragmented content body into a single byte array */
-    private byte[] coalesceContentBody() {
-        if (this.bodyLength == 0) return EMPTY_BYTE_ARRAY;
-        if (this.bodyN.size() == 1) return this.bodyN.get(0);
-
-        byte[] body = new byte[bodyLength];
-        int offset = 0;
-        for (byte[] fragment : this.bodyN) {
-            System.arraycopy(fragment, 0, body, offset, fragment.length);
-            offset += fragment.length;
+    public synchronized InputStream getContentBody() throws IOException {
+        if (body != null) {
+            return body;
         }
-        this.bodyN.clear();
-        this.bodyN.add(body);
-        return body;
+        InputStream input = accumulator.getInputStream();
+        accumulator.close();
+        return input;
     }
 
-    public synchronized byte[] getContentBody() {
-        return coalesceContentBody();
-    }
-
-    private void appendBodyFragment(byte[] fragment) {
-        if (fragment == null || fragment.length == 0) return;
-        bodyN.add(fragment);
+    private void appendBodyFragment(byte[] fragment) throws IOException {
+        if (fragment == null || fragment.length == 0) {
+            return;
+        }
+        accumulator.write(fragment);
         bodyLength += fragment.length;
+    }
+
+    public int getBodyLength(){
+        return bodyLength;
     }
 
     /**

@@ -16,7 +16,12 @@
 
 package com.rabbitmq.client;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 
 /**
  * Subclass of RpcServer which accepts UTF-8 string requests.
@@ -37,26 +42,15 @@ public class StringRpcServer extends RpcServer {
      */
     @Override
     @SuppressWarnings("unused")
-    public byte[] handleCall(byte[] requestBody, AMQP.BasicProperties replyProperties)
+    public InputStream handleCall(InputStream requestBody, AMQP.BasicProperties replyProperties)
     {
-        String request;
-        try {
-            request = new String(requestBody, STRING_ENCODING);
-        } catch (IOException _e) {
-            request = new String(requestBody);
-        }
-        String reply = handleStringCall(request, replyProperties);
-        try {
-            return reply.getBytes(STRING_ENCODING);
-        } catch (IOException _e) {
-            return reply.getBytes();
-        }
+        return handleStringCall(requestBody, replyProperties);
     }
 
     /**
      * Delegates to handleStringCall(String).
      */
-    public String handleStringCall(String request, AMQP.BasicProperties replyProperties)
+    public InputStream handleStringCall(InputStream request, AMQP.BasicProperties replyProperties)
     {
         return handleStringCall(request);
     }
@@ -64,9 +58,9 @@ public class StringRpcServer extends RpcServer {
     /**
      * Default implementation - override in subclasses. Returns the empty string.
      */
-    public String handleStringCall(String request)
+    public InputStream handleStringCall(InputStream request)
     {
-        return "";
+        return new ByteArrayInputStream(new byte[0]);
     }
 
     /**
@@ -75,19 +69,15 @@ public class StringRpcServer extends RpcServer {
      * tries the platform default.
      */
     @Override
-    public void handleCast(byte[] requestBody)
+    public void handleCast(InputStream requestBody)
     {
-        try {
-            handleStringCast(new String(requestBody, STRING_ENCODING));
-        } catch (IOException _e) {
-            handleStringCast(new String(requestBody));
-        }
+        handleStringCast(requestBody);
     }
 
     /**
      * Default implementation - override in subclasses. Does nothing.
      */
-    public void handleStringCast(String requestBody) {
+    public void handleStringCast(InputStream requestBody) {
         // Do nothing.
     }
 }

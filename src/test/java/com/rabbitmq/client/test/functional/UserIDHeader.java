@@ -17,6 +17,7 @@ package com.rabbitmq.client.test.functional;
 
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
@@ -59,7 +60,8 @@ public class UserIDHeader extends BrokerTestCase {
     }
 
     private void publish(AMQP.BasicProperties properties) throws IOException {
-        channel.basicPublish("amq.fanout", "", properties, "".getBytes());
+        ByteArrayInputStream input = new ByteArrayInputStream("".getBytes());
+        channel.basicPublish("amq.fanout", "", properties, input, input.available());
         channel.queueDeclare(); // To flush the channel
     }
 }

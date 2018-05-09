@@ -64,8 +64,8 @@ public class Firehose extends BrokerTestCase {
         checkHeaders(delHeaders);
         assertNotNull(delHeaders.get("redelivered"));
 
-        assertEquals(msg.getBody().length, publish.getBody().length);
-        assertEquals(msg.getBody().length, deliver.getBody().length);
+        assertEquals(msg.getBody().available(), publish.getBody().available());
+        assertEquals(msg.getBody().available(), deliver.getBody().available());
     }
 
     private GetResponse publishGet(String key) throws IOException {

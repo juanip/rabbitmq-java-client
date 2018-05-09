@@ -24,7 +24,9 @@ import com.rabbitmq.tools.Host;
 import org.awaitility.Duration;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -386,7 +388,8 @@ public class Metrics extends BrokerTestCase {
             assertThat(metrics.getConnections().getCount(), is(1L));
             assertThat(metrics.getChannels().getCount(), is(1L));
 
-            channel.basicPublish("unlikelynameforanexchange", "", null, "msg".getBytes("UTF-8"));
+            InputStream input = new ByteArrayInputStream("msg".getBytes("UTF-8"));
+            channel.basicPublish("unlikelynameforanexchange", "", null, input, input.available());
 
             waitAtMost(timeout()).until(new ChannelsMetricsCallable(metrics), is(0L));
             assertThat(metrics.getConnections().getCount(), is(1L));
@@ -443,7 +446,7 @@ public class Metrics extends BrokerTestCase {
 
             channel1.basicConsume(QUEUE, false, new DefaultConsumer(channel1) {
                 @Override
-                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                     channel1.basicAck(envelope.getDeliveryTag(), false);
                     ackedMessages.incrementAndGet();
                 }
@@ -542,7 +545,7 @@ public class Metrics extends BrokerTestCase {
             this.channel.basicConsume(QUEUE, autoAck, new DefaultConsumer(channel) {
 
                 @Override
-                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                     if(!autoAck) {
                         getChannel().basicAck(envelope.getDeliveryTag(), random.nextBoolean());
                     }
@@ -589,7 +592,7 @@ public class Metrics extends BrokerTestCase {
             this.channel.basicConsume(QUEUE, false, new DefaultConsumer(channel) {
 
                 @Override
-                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                     if(random.nextBoolean()) {
                         channel.basicNack(envelope.getDeliveryTag(), random.nextBoolean(), false);
                     } else {
@@ -612,7 +615,8 @@ public class Metrics extends BrokerTestCase {
     }
 
     private void sendMessage(Channel channel) throws IOException {
-        channel.basicPublish("", QUEUE, null, "msg".getBytes("UTF-8"));
+        InputStream input = new ByteArrayInputStream("msg".getBytes("UTF-8"));
+        channel.basicPublish("", QUEUE, null, input, input.available());
     }
 
     private Duration timeout() {
@@ -629,7 +633,7 @@ public class Metrics extends BrokerTestCase {
         }
 
         @Override
-        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
             try {
                 Thread.sleep(new Random().nextInt(10));
             } catch (InterruptedException e) {

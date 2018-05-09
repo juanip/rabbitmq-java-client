@@ -47,7 +47,7 @@ public class BindingLifecycle extends BindingLifecycleBase {
     @Test public void queuePurge() throws IOException {
 
         Binding binding = setupExchangeBindings(false);
-        channel.basicPublish(binding.x, binding.k, null, payload);
+        channel.basicPublish(binding.x, binding.k, null, payload, payload.available());
 
         // Purge the queue, and test that we don't recieve a message
         channel.queuePurge(binding.q);
@@ -67,7 +67,7 @@ public class BindingLifecycle extends BindingLifecycleBase {
     @SuppressWarnings("deprecation")
     @Test public void unackedPurge() throws IOException {
         Binding binding = setupExchangeBindings(false);
-        channel.basicPublish(binding.x, binding.k, null, payload);
+        channel.basicPublish(binding.x, binding.k, null, payload, payload.available());
 
         GetResponse response = channel.basicGet(binding.q, false);
         assertFalse(response.getEnvelope().isRedeliver());

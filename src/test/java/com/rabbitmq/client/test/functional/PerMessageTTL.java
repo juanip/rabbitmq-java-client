@@ -19,7 +19,9 @@ package com.rabbitmq.client.test.functional;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.junit.Test;
 
@@ -33,7 +35,8 @@ public class PerMessageTTL extends TTLHandling {
 
     @Override
     protected void publish(String msg) throws IOException {
-        basicPublishVolatile(msg.getBytes(), TTL_EXCHANGE, TTL_QUEUE_NAME,
+        InputStream input = new ByteArrayInputStream(msg.getBytes());
+        basicPublishVolatile(input, input.available(), TTL_EXCHANGE, TTL_QUEUE_NAME,
                 MessageProperties.TEXT_PLAIN
                         .builder()
                         .expiration(String.valueOf(sessionTTL))
@@ -66,11 +69,12 @@ public class PerMessageTTL extends TTLHandling {
         final String expiryDelay = "2000";
         declareDurableQueue(TTL_QUEUE_NAME);
         bindQueue();
+        InputStream input = new ByteArrayInputStream(new byte[0]);
         channel.basicPublish(TTL_EXCHANGE, TTL_QUEUE_NAME,
                 MessageProperties.MINIMAL_PERSISTENT_BASIC
                         .builder()
                         .expiration(expiryDelay)
-                        .build(), new byte[]{});
+                        .build(), input, input.available());
         long expiryStartTime = System.currentTimeMillis();
         restart();
         Thread.sleep(Integer.parseInt(expiryDelay));

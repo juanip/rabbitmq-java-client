@@ -21,7 +21,9 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +41,8 @@ public class DirectReplyTo extends BrokerTestCase {
         String replyTo = rpcFirstHalf(c);
         declare(connection, replyTo, true);
         channel.confirmSelect();
-        basicPublishVolatile("response".getBytes(), "", replyTo, MessageProperties.BASIC);
+        InputStream input = new ByteArrayInputStream("response".getBytes());
+        basicPublishVolatile(input, input.available(), "", replyTo, MessageProperties.BASIC);
         channel.waitForConfirms();
 
         byte[] body = c.nextDelivery(10000);
@@ -53,7 +56,8 @@ public class DirectReplyTo extends BrokerTestCase {
         // we can't publish using just the pid
         replyTo = replyTo.substring(0, replyTo.length() - 5) + "xxxxx";
         declare(connection, replyTo, false);
-        basicPublishVolatile("response".getBytes(), "", replyTo, MessageProperties.BASIC);
+        InputStream input = new ByteArrayInputStream("response".getBytes());
+        basicPublishVolatile(input, input.available(), "", replyTo, MessageProperties.BASIC);
 
         byte[] body = c.nextDelivery(500);
         assertNull(body);
@@ -105,7 +109,8 @@ public class DirectReplyTo extends BrokerTestCase {
     private String rpcFirstHalf(Consumer c) throws IOException {
         channel.basicConsume(QUEUE, true, c);
         String serverQueue = channel.queueDeclare().getQueue();
-        basicPublishVolatile("request".getBytes(), "", serverQueue, props());
+        InputStream input = new ByteArrayInputStream("request".getBytes());
+        basicPublishVolatile(input, input.available(), "", serverQueue, props());
 
         GetResponse req = channel.basicGet(serverQueue, true);
         return req.getProps().getReplyTo();
@@ -124,8 +129,10 @@ public class DirectReplyTo extends BrokerTestCase {
         }
 
         @Override
-        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-            messages.add(body);
+        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
+            byte[] bytes = new byte[body.available()];
+            body.read(bytes);
+            messages.add(bytes);
         }
 
         byte[] nextDelivery() {

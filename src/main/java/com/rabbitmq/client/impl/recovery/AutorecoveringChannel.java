@@ -19,6 +19,7 @@ import com.rabbitmq.client.*;
 import com.rabbitmq.client.RecoverableChannel;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeoutException;
@@ -30,6 +31,12 @@ import java.util.concurrent.TimeoutException;
  * @since 3.3.0
  */
 public class AutorecoveringChannel implements RecoverableChannel {
+    @Override
+    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate,
+            AMQP.BasicProperties props, InputStream body, int bodyLength) throws IOException {
+        delegate.basicPublish(exchange, routingKey, mandatory, immediate, props, body, bodyLength);
+    }
+
     private volatile RecoveryAwareChannelN delegate;
     private volatile AutorecoveringConnection connection;
     private final List<ShutdownListener> shutdownHooks  = new CopyOnWriteArrayList<ShutdownListener>();
@@ -63,7 +70,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     @Override
-    public void close() throws IOException, TimeoutException {
+    public void close() throws IOException {
         try {
             delegate.close();
         } finally {
@@ -75,7 +82,7 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     @Override
-    public void close(int closeCode, String closeMessage) throws IOException, TimeoutException {
+    public void close(int closeCode, String closeMessage) throws IOException {
         try {
           delegate.close(closeCode, closeMessage);
         } finally {
@@ -188,18 +195,13 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     @Override
-    public void basicPublish(String exchange, String routingKey, AMQP.BasicProperties props, byte[] body) throws IOException {
-        delegate.basicPublish(exchange, routingKey, props, body);
+    public void basicPublish(String exchange, String routingKey, AMQP.BasicProperties props, InputStream body, int length) throws IOException {
+        delegate.basicPublish(exchange, routingKey, props, body, length);
     }
 
     @Override
-    public void basicPublish(String exchange, String routingKey, boolean mandatory, AMQP.BasicProperties props, byte[] body) throws IOException {
-        delegate.basicPublish(exchange, routingKey, mandatory, props, body);
-    }
-
-    @Override
-    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, AMQP.BasicProperties props, byte[] body) throws IOException {
-        delegate.basicPublish(exchange, routingKey, mandatory, immediate, props, body);
+    public void basicPublish(String exchange, String routingKey, boolean mandatory, AMQP.BasicProperties props, InputStream body, int length) throws IOException {
+        delegate.basicPublish(exchange, routingKey, mandatory, props, body, length);
     }
 
     @Override

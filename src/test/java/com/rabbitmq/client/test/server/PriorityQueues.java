@@ -17,7 +17,9 @@ package com.rabbitmq.client.test.server;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,7 +57,7 @@ public class PriorityQueues extends BrokerTestCase {
         channel.basicConsume(q, true, new DefaultConsumer(channel) {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope,
-                                       AMQP.BasicProperties properties, byte[] body) throws IOException {
+                                       AMQP.BasicProperties properties, InputStream body) throws IOException {
                 xs.add(properties.getPriority());
                 latch.countDown();
             }
@@ -68,7 +70,8 @@ public class PriorityQueues extends BrokerTestCase {
     private void publishWithPriorities(String q, int n) throws IOException, TimeoutException, InterruptedException {
         channel.confirmSelect();
         for (int i = 1; i <= n; i++) {
-            channel.basicPublish("", q, propsWithPriority(i), "msg".getBytes("UTF-8"));
+            InputStream input = new ByteArrayInputStream("msg".getBytes("UTF-8"));
+            channel.basicPublish("", q, propsWithPriority(i), input, input.available());
         }
         channel.waitForConfirms(500);
     }

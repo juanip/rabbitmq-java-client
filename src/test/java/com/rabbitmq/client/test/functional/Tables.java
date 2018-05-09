@@ -19,7 +19,9 @@ package com.rabbitmq.client.test.functional;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,7 +70,8 @@ public class Tables extends BrokerTestCase
                                                     null, null, null, null,
                                                     null, null, null, null,
                                                     null, null);
-        channel.basicPublish("", q, props, "".getBytes());
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        channel.basicPublish("", q, props, input, input.available());
         BasicProperties rProps = channel.basicGet(q, true).getProps();
         assertMapsEqual(props.getHeaders(), rProps.getHeaders());
 

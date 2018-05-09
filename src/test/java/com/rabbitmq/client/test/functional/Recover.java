@@ -16,12 +16,15 @@
 
 package com.rabbitmq.client.test.functional;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -31,11 +34,15 @@ import com.rabbitmq.client.*;
 import org.junit.Test;
 
 import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.client.test.TestUtils;
 
 public class Recover extends BrokerTestCase {
 
     String queue;
-    final byte[] body = "message".getBytes();
+
+    static InputStream getBody() {
+        return new ByteArrayInputStream("message".getBytes());
+    }
 
     public void createResources() throws IOException {
         AMQP.Queue.DeclareOk ok = channel.queueDeclare();
@@ -54,34 +61,38 @@ public class Recover extends BrokerTestCase {
         throws IOException, InterruptedException {
         QueueingConsumer consumer = new QueueingConsumer(channel);
         channel.basicConsume(queue, false, consumer); // require acks.
-        channel.basicPublish("", queue, new AMQP.BasicProperties.Builder().build(), body);
+        InputStream body = getBody();
+        String bodyMessage = TestUtils.readString(getBody());
+        channel.basicPublish("", queue, new AMQP.BasicProperties.Builder().build(), body, body.available());
         QueueingConsumer.Delivery delivery = consumer.nextDelivery();
-        assertTrue("consumed message body not as sent",
-                   Arrays.equals(body, delivery.getBody()));
+        assertEquals("consumed message body not as sent", bodyMessage, TestUtils.readString(delivery.getBody()));
         // Don't ack it, and get it redelivered to the same consumer
         call.recover(channel);
         QueueingConsumer.Delivery secondDelivery = consumer.nextDelivery(5000);
         assertNotNull("timed out waiting for redelivered message", secondDelivery);
-        assertTrue("consumed (redelivered) message body not as sent",
-                   Arrays.equals(body, delivery.getBody()));
+        assertEquals("consumed (redelivered) message body not as sent",
+                 bodyMessage, TestUtils.readString(secondDelivery.getBody()));
     }
 
     void verifyNoRedeliveryWithAutoAck(RecoverCallback call)
         throws IOException, InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<byte[]> bodyReference = new AtomicReference<byte[]>();
+        final AtomicReference<InputStream> bodyReference = new AtomicReference<InputStream>();
         Consumer consumer = new DefaultConsumer(channel) {
             @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                 bodyReference.set(body);
                 latch.countDown();
             }
         };
+        InputStream body = getBody();
+        String bodyMessage = TestUtils.readString(getBody());
+
         channel.basicConsume(queue, true, consumer); // auto ack.
-        channel.basicPublish("", queue, new AMQP.BasicProperties.Builder().build(), body);
+        channel.basicPublish("", queue, new AMQP.BasicProperties.Builder().build(), body, body.available());
         assertTrue(latch.await(5, TimeUnit.SECONDS));
-        assertTrue("consumed message body not as sent",
-                   Arrays.equals(body, bodyReference.get()));
+        assertEquals("consumed message body not as sent",
+                   bodyMessage, TestUtils.readString(bodyReference.get()));
         call.recover(channel);
         assertNull("should be no message available", channel.basicGet(queue, true));
     }

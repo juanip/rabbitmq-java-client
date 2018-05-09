@@ -19,7 +19,9 @@ package com.rabbitmq.client.test.functional;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.junit.Test;
 
@@ -27,11 +29,11 @@ import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.client.test.TestUtils;
 
 public class ExchangeExchangeBindings extends BrokerTestCase {
 
     private static final int TIMEOUT = 5000;
-    private static final byte[] MARKER = "MARK".getBytes();
 
     private final String[] queues = new String[] { "q0", "q1", "q2" };
     private final String[] exchanges = new String[] { "e0", "e1", "e2" };
@@ -42,9 +44,14 @@ public class ExchangeExchangeBindings extends BrokerTestCase {
     private final QueueingConsumer[] consumers = new QueueingConsumer[] { null, null,
             null };
 
+    private static InputStream getMarker() {
+        return  new ByteArrayInputStream("MARK".getBytes());
+    }
+
     protected void publishWithMarker(String x, String rk) throws IOException {
         basicPublishVolatile(x, rk);
-        basicPublishVolatile(MARKER, x, rk);
+        InputStream marker = getMarker();
+        basicPublishVolatile(marker, marker.available(), x, rk);
     }
 
     @Override
@@ -76,10 +83,10 @@ public class ExchangeExchangeBindings extends BrokerTestCase {
     }
 
     protected void consumeNoDuplicates(QueueingConsumer consumer)
-            throws ShutdownSignalException, InterruptedException {
+            throws ShutdownSignalException, InterruptedException, IOException {
         assertNotNull(consumer.nextDelivery(TIMEOUT));
         Delivery markerDelivery = consumer.nextDelivery(TIMEOUT);
-        assertEquals(new String(MARKER), new String(markerDelivery.getBody()));
+        assertEquals(TestUtils.readString(getMarker()), TestUtils.readString(markerDelivery.getBody()));
     }
 
     @Test public void bindingCreationDeletion() throws IOException {

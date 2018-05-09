@@ -21,7 +21,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
@@ -35,7 +37,8 @@ public class BasicGet extends BrokerTestCase {
     assertTrue(channel.isOpen());
     String q = channel.queueDeclare().getQueue();
 
-    basicPublishPersistent("msg".getBytes("UTF-8"), q);
+    InputStream input = new ByteArrayInputStream("msg".getBytes("UTF-8"));
+    basicPublishPersistent(input, input.available(), q);
     Thread.sleep(250);
 
     assertNotNull(channel.basicGet(q, true));

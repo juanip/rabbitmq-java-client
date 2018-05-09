@@ -20,12 +20,14 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.TimeoutException;
 
 import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.GetResponse;
 
 /**
  * This tests whether bindings are created and nuked properly.
@@ -41,7 +43,7 @@ public class BindingLifecycleBase extends ClusteredTestBase {
   protected static final int N = 1;
   protected static final String Q = "Q-" + System.currentTimeMillis();
   protected static final String X = "X-" + System.currentTimeMillis();
-  protected static final byte[] payload = ("" + System.currentTimeMillis()).getBytes();
+  protected static final InputStream payload = new ByteArrayInputStream(("" + System.currentTimeMillis()).getBytes());
 
   protected static String randomString() {
     return "-" + System.nanoTime();
@@ -118,13 +120,13 @@ public class BindingLifecycleBase extends ClusteredTestBase {
   }
 
   protected void sendRoutable(Binding binding) throws IOException {
-    channel.basicPublish(binding.x, binding.k, null, payload);
+    channel.basicPublish(binding.x, binding.k, null, payload, payload.available());
     GetResponse response = channel.basicGet(binding.q, true);
     assertNotNull("The response should not be null", response);
   }
 
   protected void sendUnroutable(Binding binding) throws IOException {
-    channel.basicPublish(binding.x, binding.k, null, payload);
+    channel.basicPublish(binding.x, binding.k, null, payload, payload.available());
     GetResponse response = channel.basicGet(binding.q, true);
     assertNull("The response SHOULD BE null", response);
   }

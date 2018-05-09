@@ -18,7 +18,9 @@ package com.rabbitmq.client.test.functional;
 
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
 
@@ -65,7 +67,8 @@ public class PerQueueTTL extends TTLHandling {
     }
 
     protected void publishWithExpiration(String msg, Object sessionTTL) throws IOException {
-        basicPublishVolatile(msg.getBytes(), TTL_EXCHANGE, TTL_QUEUE_NAME,
+        InputStream input = new ByteArrayInputStream(msg.getBytes());
+        basicPublishVolatile(input, input.available(), TTL_EXCHANGE, TTL_QUEUE_NAME,
                 MessageProperties.TEXT_PLAIN
                         .builder()
                         .expiration(String.valueOf(sessionTTL))

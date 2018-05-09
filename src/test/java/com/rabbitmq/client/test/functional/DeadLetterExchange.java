@@ -18,9 +18,13 @@ package com.rabbitmq.client.test.functional;
 import com.rabbitmq.client.*;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.client.test.TestUtils;
+
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -354,13 +358,14 @@ public class DeadLetterExchange extends BrokerTestCase {
         declareQueue("queue1", "", "queue2", null, 1);
         declareQueue("queue2", "", "queue1", null, 0);
 
-        channel.basicPublish("", "queue1", MessageProperties.BASIC, "".getBytes());
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        channel.basicPublish("", "queue1", MessageProperties.BASIC, input, input.available());
         final CountDownLatch latch = new CountDownLatch(10);
         channel.basicConsume("queue2", false,
             new DefaultConsumer(channel) {
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope,
-                                           AMQP.BasicProperties properties, byte[] body) throws IOException {
+                                           AMQP.BasicProperties properties, InputStream body) throws IOException {
                     channel.basicReject(envelope.getDeliveryTag(), false);
                     latch.countDown();
                 }
@@ -420,7 +425,9 @@ public class DeadLetterExchange extends BrokerTestCase {
         GetResponse getResponse = channel.basicGet(DLQ, true);
         assertNotNull("Message not dead-lettered",
             getResponse);
-        assertEquals("test message", new String(getResponse.getBody()));
+        byte[] message1 = new byte[getResponse.getBody().available()];
+        getResponse.getBody().read(message1);
+        assertEquals("test message", new String(message1));
         BasicProperties props = getResponse.getProps();
         Map<String, Object> headers = props.getHeaders();
         assertNotNull(headers);
@@ -439,16 +446,19 @@ public class DeadLetterExchange extends BrokerTestCase {
 
         sleep(100);
         //Queueing second time with same props
+        InputStream input = new ByteArrayInputStream("test message".getBytes());
         channel.basicPublish("amq.direct", "test",
             new AMQP.BasicProperties.Builder()
                .headers(headers)
-               .build(), "test message".getBytes());
+               .build(), input, input.available());
 
         sleep(100);
 
         getResponse = channel.basicGet(DLQ, true);
         assertNotNull("Message not dead-lettered", getResponse);
-        assertEquals("test message", new String(getResponse.getBody()));
+        byte[] message2 = new byte[getResponse.getBody().available()];
+        getResponse.getBody().read(message2);
+        assertEquals("test message", new String(message2));
         headers = getResponse.getProps().getHeaders();
         assertNotNull(headers);
         death = (ArrayList<Object>) headers.get("x-death");
@@ -461,15 +471,17 @@ public class DeadLetterExchange extends BrokerTestCase {
 
         //Set invalid headers
         headers.put("x-death", "[I, am, not, array]");
+
+        InputStream message3 = new ByteArrayInputStream("test message".getBytes());
         channel.basicPublish("amq.direct", "test",
             new AMQP.BasicProperties.Builder()
                .headers(headers)
-               .build(), "test message".getBytes());
+               .build(), message3, message3.available());
         sleep(100);
 
         getResponse = channel.basicGet(DLQ, true);
         assertNotNull("Message not dead-lettered", getResponse);
-        assertEquals("test message", new String(getResponse.getBody()));
+        assertEquals("test message", TestUtils.readString(getResponse.getBody()));
         headers = getResponse.getProps().getHeaders();
         assertNotNull(headers);
         death = (ArrayList<Object>) headers.get("x-death");
@@ -621,7 +633,8 @@ public class DeadLetterExchange extends BrokerTestCase {
     private void publish(AMQP.BasicProperties props, String body)
         throws IOException
     {
-        channel.basicPublish("amq.direct", "test", props, body.getBytes());
+        InputStream input = new ByteArrayInputStream(body.getBytes());
+        channel.basicPublish("amq.direct", "test", props, input, input.available());
     }
 
     private void publishAt(long when) throws Exception {
@@ -648,7 +661,7 @@ public class DeadLetterExchange extends BrokerTestCase {
                 channel.basicGet(queue, true);
             assertNotNull("Messages not dead-lettered (" + (n-x) + " left)",
                           getResponse);
-            assertEquals("test message", new String(getResponse.getBody()));
+            assertEquals("test message", TestUtils.readString(getResponse.getBody()));
             withResponse.process(getResponse);
         }
         GetResponse getResponse = channel.basicGet(queue, true);
@@ -706,8 +719,10 @@ public class DeadLetterExchange extends BrokerTestCase {
         }
 
         @Override
-        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-            messages.add(body);
+        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
+            byte[] bytes = new byte[body.available()];
+            body.read(bytes);
+            messages.add(bytes);
         }
 
         byte[] nextDelivery() {

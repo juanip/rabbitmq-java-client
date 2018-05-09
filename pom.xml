@@ -4,7 +4,7 @@
 
   <groupId>com.rabbitmq</groupId>
   <artifactId>amqp-client</artifactId>
-  <version>4.6.1-SNAPSHOT</version>
+  <version>4.6.1</version>
   <packaging>jar</packaging>
 
   <name>RabbitMQ Java Client</name>
@@ -15,16 +15,6 @@
     <license>
       <name>ASL 2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
-      <distribution>repo</distribution>
-    </license>
-    <license>
-      <name>GPL v2</name>
-      <url>http://www.gnu.org/licenses/gpl-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-    <license>
-      <name>MPL 1.1</name>
-      <url>http://www.mozilla.org/MPL/MPL-1.1.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -54,7 +44,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <slf4j.version>1.7.25</slf4j.version>
+    <slf4j.version>1.6.4</slf4j.version>
     <metrics.version>3.2.6</metrics.version>
     <micrometer.version>1.0.2</micrometer.version>
     <logback.version>1.2.3</logback.version>
@@ -627,17 +617,12 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
       <version>${slf4j.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-core</artifactId>
       <version>${metrics.version}</version>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-core</artifactId>
-      <version>${micrometer.version}</version>
       <optional>true</optional>
     </dependency>
     <dependency>
@@ -931,6 +916,14 @@
         <configuration>
           <additionalOptions>${javadoc.opts}</additionalOptions>
           <quiet>true</quiet>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
         </configuration>
       </plugin>
 

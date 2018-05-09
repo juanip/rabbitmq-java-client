@@ -6,7 +6,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.*;
 
 import static org.junit.Assert.assertTrue;
@@ -141,11 +143,12 @@ public class JavaNioTest {
         channel.queueDeclare(queue, false, false, false, null);
         channel.queuePurge(queue);
 
-        channel.basicPublish("", queue, null, new byte[20000]);
+        ByteArrayInputStream input = new ByteArrayInputStream(new byte[20000]);
+        channel.basicPublish("", queue, null, input, input.available());
 
         channel.basicConsume(queue, false, new DefaultConsumer(channel) {
             @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                 getChannel().basicAck(envelope.getDeliveryTag(), false);
                 latch.countDown();
             }
@@ -160,12 +163,13 @@ public class JavaNioTest {
         channel.queueDeclare(queue, false, false, false, null);
         channel.queuePurge(queue);
 
-        channel.basicPublish("", queue, null, new byte[msgSize]);
+        ByteArrayInputStream input = new ByteArrayInputStream(new byte[msgSize]);
+        channel.basicPublish("", queue, null, input, input.available());
 
         final String tag = channel.basicConsume(queue, false, new DefaultConsumer(channel) {
 
             @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                 getChannel().basicAck(envelope.getDeliveryTag(), false);
                 latch.countDown();
             }

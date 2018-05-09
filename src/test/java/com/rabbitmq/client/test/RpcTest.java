@@ -16,13 +16,20 @@
 
 package com.rabbitmq.client.test;
 
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.RpcClient;
+import com.rabbitmq.client.RpcServer;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Collections;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,9 +76,11 @@ public class RpcTest {
             }
         }).start();
 
+        InputStream input = TestUtils.getInputStreamMessage("hello");
         RpcClient client = new RpcClient(clientChannel, "", queue, 1000);
-        RpcClient.Response response = client.doCall(null, "hello".getBytes());
-        assertEquals("*** hello ***", new String(response.getBody()));
+        RpcClient.Response response = client.doCall(null, input, input.available());
+
+        assertEquals("*** hello ***", TestUtils.readString(response.getBody()));
         assertEquals("pre-hello", response.getProperties().getHeaders().get("pre").toString());
         assertEquals("post-hello", response.getProperties().getHeaders().get("post").toString());
         client.close();
@@ -86,21 +95,22 @@ public class RpcTest {
         @Override
         protected AMQP.BasicProperties preprocessReplyProperties(QueueingConsumer.Delivery request, AMQP.BasicProperties.Builder builder) {
             Map<String, Object> headers = new HashMap<String, Object>();
-            headers.put("pre", "pre-" + new String(request.getBody()));
+            headers.put("pre", "pre-hello");
             builder.headers(headers);
             return builder.build();
         }
 
         @Override
-        public byte[] handleCall(QueueingConsumer.Delivery request, AMQP.BasicProperties replyProperties) {
-            String input = new String(request.getBody());
-            return ("*** " + input + " ***").getBytes();
+        public InputStream handleCall(QueueingConsumer.Delivery request, AMQP.BasicProperties replyProperties) {
+            InputStream body = request.getBody();
+            String input = TestUtils.readStringQuietly(body);
+            return TestUtils.getInputStreamMessage("*** " + input + " ***");
         }
 
         @Override
         protected AMQP.BasicProperties postprocessReplyProperties(QueueingConsumer.Delivery request, AMQP.BasicProperties.Builder builder) {
             Map<String, Object> headers = new HashMap<String, Object>(builder.build().getHeaders());
-            headers.put("post", "post-" + new String(request.getBody()));
+            headers.put("post", "post-hello");
             builder.headers(headers);
             return builder.build();
         }

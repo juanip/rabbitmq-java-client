@@ -15,6 +15,7 @@
 
 package com.rabbitmq.client.test.server;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import org.junit.Test;
@@ -37,9 +38,11 @@ public class MessageRecovery extends ConfirmBase
         channel.queueDelete(Q2);
         channel.confirmSelect();
         channel.queueDeclare(Q, true, false, false, null);
+
+        ByteArrayInputStream input = new ByteArrayInputStream("nop".getBytes());
         channel.basicPublish("", Q, false, false,
                              MessageProperties.PERSISTENT_BASIC,
-                             "nop".getBytes());
+                             input, input.available());
         waitForConfirms();
 
         channel.queueDeclare(Q2, false, false, false, null);

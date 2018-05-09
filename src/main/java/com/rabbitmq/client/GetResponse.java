@@ -17,6 +17,8 @@ package com.rabbitmq.client;
 
 import com.rabbitmq.client.AMQP.BasicProperties;
 
+import java.io.InputStream;
+
 /**
  * Encapsulates the response from a {@link Channel#basicGet} message-retrieval method call
  * - essentially a static bean "holder" with message response data.
@@ -24,7 +26,7 @@ import com.rabbitmq.client.AMQP.BasicProperties;
 public class GetResponse {
     private final Envelope envelope;
     private final BasicProperties props;
-    private final byte[] body;
+    private final InputStream body;
     private final int messageCount;
 
     /**
@@ -34,7 +36,7 @@ public class GetResponse {
      * @param body the message body
      * @param messageCount the server's most recent estimate of the number of messages remaining on the queue
      */
-    public GetResponse(Envelope envelope, BasicProperties props, byte[] body, int messageCount)
+    public GetResponse(Envelope envelope, BasicProperties props, InputStream body, int messageCount)
     {
         this.envelope = envelope;
         this.props = props;
@@ -62,7 +64,7 @@ public class GetResponse {
      * Get the message body included in this response
      * @return the message body
      */
-    public byte[] getBody() {
+    public InputStream getBody() {
         return body;
     }
 
@@ -92,7 +94,6 @@ public class GetResponse {
         sb.append("GetResponse(envelope=").append(envelope);
         sb.append(", props=").append(props);
         sb.append(", messageCount=").append(messageCount);
-        sb.append(", body=(elided, ").append(body.length).append(" bytes long)");
         sb.append(")");
         return sb.toString();
     }

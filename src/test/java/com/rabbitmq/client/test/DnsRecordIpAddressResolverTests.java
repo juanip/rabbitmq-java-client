@@ -38,14 +38,14 @@ public class DnsRecordIpAddressResolverTests extends BrokerTestCase {
         }
     }
 
-    @Test public void resolutionFails() throws IOException, TimeoutException {
+    @Test public void resolutionFails() throws TimeoutException {
         DnsRecordIpAddressResolver addressResolver = new DnsRecordIpAddressResolver(
-            "afancyandunlikelyhostname"
+            "afancyandunlikelyhostname123"
         );
         try {
             connectionFactory.newConnection(addressResolver);
             fail("The host resolution should have failed");
-        } catch (UnknownHostException e) {
+        } catch (IOException e) {
             // expected
         }
     }

@@ -20,7 +20,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +32,7 @@ import org.junit.Test;
 
 import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.client.test.TestUtils;
 
 /**
  * Test queue max length limit.
@@ -137,14 +140,15 @@ public class QueueSizeLimit extends BrokerTestCase {
     }
 
     private void publish(String payload) throws IOException, InterruptedException {
-        basicPublishVolatile(payload.getBytes(), q);
+        InputStream input = new ByteArrayInputStream(payload.getBytes());
+        basicPublishVolatile(input, input.available(), q);
     }
 
     private void assertHead(int expectedLength, String expectedHeadPayload, String queueName) throws IOException {
         GetResponse head = channel.basicGet(queueName, true);
         if (expectedLength > 0) {
             assertNotNull(head);
-            assertEquals(expectedHeadPayload, new String(head.getBody()));
+            assertEquals(expectedHeadPayload, TestUtils.readString(head.getBody()));
             assertEquals(expectedLength, head.getMessageCount() + 1);
         } else {
             assertNull(head);

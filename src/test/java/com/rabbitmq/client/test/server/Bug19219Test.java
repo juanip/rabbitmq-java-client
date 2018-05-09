@@ -17,7 +17,9 @@ package com.rabbitmq.client.test.server;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeoutException;
@@ -59,9 +61,10 @@ public class Bug19219Test extends BrokerTestCase {
 
     private static void publish(final Channel ch)
         throws IOException {
+        InputStream input = new ByteArrayInputStream(new byte[0]);
         ch.basicPublish("amq.fanout", "",
                         MessageProperties.PERSISTENT_TEXT_PLAIN,
-                        new byte[0]);
+                        input, input.available());
     }
 
     @Test public void it() throws IOException, InterruptedException {

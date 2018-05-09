@@ -16,6 +16,7 @@
 package com.rabbitmq.client.impl;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -529,14 +530,14 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     /** Public API - {@inheritDoc} */
     @Override
     public void close()
-        throws IOException, TimeoutException {
+        throws IOException {
         close(AMQP.REPLY_SUCCESS, "OK");
     }
 
     /** Public API - {@inheritDoc} */
     @Override
     public void close(int closeCode, String closeMessage)
-        throws IOException, TimeoutException {
+        throws IOException {
         close(closeCode, closeMessage, true, null, false);
     }
 
@@ -557,8 +558,6 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
           close(closeCode, closeMessage, true, null, true);
         } catch (IOException _e) {
         /* ignored */
-        } catch (TimeoutException _e) {
-          /* ignored */
         }
     }
 
@@ -578,7 +577,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                       boolean initiatedByApplication,
                       Throwable cause,
                       boolean abort)
-        throws IOException, TimeoutException {
+        throws IOException {
         // First, notify all our dependents that we are shutting down.
         // This clears isOpen(), so no further work from the
         // application side will be accepted, and any inbound commands
@@ -615,7 +614,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             k.getReply(10000);
         } catch (TimeoutException ise) {
             if (!abort)
-                throw ise;
+                throw new IOException(ise);
         } catch (ShutdownSignalException sse) {
             if (!abort)
                 throw sse;
@@ -662,47 +661,51 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     /** Public API - {@inheritDoc} */
     @Override
     public void basicPublish(String exchange, String routingKey,
-                             BasicProperties props, byte[] body)
+                             BasicProperties props, InputStream body, int bodySize)
         throws IOException
     {
-        basicPublish(exchange, routingKey, false, props, body);
+        basicPublish(exchange, routingKey, false, props, body, bodySize);
     }
 
     /** Public API - {@inheritDoc} */
     @Override
     public void basicPublish(String exchange, String routingKey,
                              boolean mandatory,
-                             BasicProperties props, byte[] body)
+                             BasicProperties props, InputStream body, int bodySize)
         throws IOException
     {
-        basicPublish(exchange, routingKey, mandatory, false, props, body);
+        basicPublish(exchange, routingKey, mandatory, false, props, body, bodySize);
     }
 
     /** Public API - {@inheritDoc} */
     @Override
-    public void basicPublish(String exchange, String routingKey,
-                             boolean mandatory, boolean immediate,
-                             BasicProperties props, byte[] body)
-        throws IOException
+    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate,
+            BasicProperties props, InputStream body, int bodySize) throws IOException
+    {
+
+        BasicProperties useProps = props;
+        if (props == null) {
+            useProps = MessageProperties.MINIMAL_BASIC;
+        }
+        basicPublish(new AMQCommand(new Basic.Publish.Builder()
+                .exchange(exchange)
+                .routingKey(routingKey)
+                .mandatory(mandatory)
+                .immediate(immediate)
+                .build(),
+                useProps, body, bodySize));
+    }
+
+    private void basicPublish(AMQCommand command) throws IOException
     {
         if (nextPublishSeqNo > 0) {
             unconfirmedSet.add(getNextPublishSeqNo());
             nextPublishSeqNo++;
         }
-        BasicProperties useProps = props;
-        if (props == null) {
-            useProps = MessageProperties.MINIMAL_BASIC;
-        }
-        transmit(new AMQCommand(new Basic.Publish.Builder()
-                                        .exchange(exchange)
-                                        .routingKey(routingKey)
-                                        .mandatory(mandatory)
-                                        .immediate(immediate)
-                                        .build(),
-                                       useProps, body));
+
+        transmit(command);
         metricsCollector.basicPublish(this);
     }
-
 
 
     /** Public API - {@inheritDoc} */
@@ -1154,7 +1157,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                                              getOk.getExchange(),
                                              getOk.getRoutingKey());
             BasicProperties props = (BasicProperties)replyCommand.getContentHeader();
-            byte[] body = replyCommand.getContentBody();
+            InputStream body = replyCommand.getContentBody();
             int messageCount = getOk.getMessageCount();
 
             metricsCollector.consumedMessage(this, getOk.getDeliveryTag(), autoAck);

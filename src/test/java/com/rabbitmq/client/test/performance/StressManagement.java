@@ -23,7 +23,9 @@ import com.rabbitmq.client.MessageProperties;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.TimeoutException;
 
 public class StressManagement {
@@ -91,7 +93,8 @@ public class StressManagement {
 
         while (true) {
             for (int i = 0; i < params.channelCount; i++) {
-                publishChannel.basicPublish("amq.fanout", "", MessageProperties.BASIC, "".getBytes());
+                InputStream input = new ByteArrayInputStream("".getBytes());
+                publishChannel.basicPublish("amq.fanout", "", MessageProperties.BASIC, input, input.available());
                 for (int j = 0; j < params.queueCount; j++) {
                     while (channels[i].basicGet("queue-" + j, true) == null) {
                         try {

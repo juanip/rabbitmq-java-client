@@ -17,7 +17,9 @@ package com.rabbitmq.client.test.server;
 
 import static org.junit.Assert.assertNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,7 +56,8 @@ public class DeadLetterExchangeDurable extends BrokerTestCase {
         if (HATests.HA_TESTS_RUNNING) return;
 
         for(int x = 0; x < DeadLetterExchange.MSG_COUNT; x++) {
-            channel.basicPublish("amq.direct", "test", MessageProperties.MINIMAL_PERSISTENT_BASIC, "test message".getBytes());
+            InputStream input = new ByteArrayInputStream("test message".getBytes());
+            channel.basicPublish("amq.direct", "test", MessageProperties.MINIMAL_PERSISTENT_BASIC, input, input.available());
         }
 
         closeConnection();

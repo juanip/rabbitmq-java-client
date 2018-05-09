@@ -31,7 +31,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,7 +71,7 @@ public class NoAutoRecoveryWhenTcpWindowIsFullTest {
 
     private static final int NUM_MESSAGES_TO_PRODUCE = 50000;
     private static final int MESSAGE_PROCESSING_TIME_MS = 3000;
-    private static final byte[] MESSAGE_CONTENT = ("MESSAGE CONTENT " + NUM_MESSAGES_TO_PRODUCE).getBytes();
+    private static final InputStream MESSAGE_CONTENT = new ByteArrayInputStream(("MESSAGE CONTENT " + NUM_MESSAGES_TO_PRODUCE).getBytes());
 
     private ExecutorService executorService;
     private AutorecoveringConnection producingConnection;
@@ -178,7 +180,7 @@ public class NoAutoRecoveryWhenTcpWindowIsFullTest {
             @Override
             public Void call() throws Exception {
                 for (int i = 0; i < NUM_MESSAGES_TO_PRODUCE; i++) {
-                    channel.basicPublish("", queue, false, properties, MESSAGE_CONTENT);
+                    channel.basicPublish("", queue, false, properties, MESSAGE_CONTENT, MESSAGE_CONTENT.available());
                 }
                 closeConnectionIfOpen(producingConnection);
                 return null;
@@ -195,10 +197,11 @@ public class NoAutoRecoveryWhenTcpWindowIsFullTest {
             }
 
             @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                 consumerWork();
                 try {
-                    consumingChannel.basicPublish("", "", null, "".getBytes());
+                    InputStream input = new ByteArrayInputStream("".getBytes());
+                    consumingChannel.basicPublish("", "", null, input, input.available());
                 } catch (Exception e) {
                     // application should handle writing exceptions
                 }
