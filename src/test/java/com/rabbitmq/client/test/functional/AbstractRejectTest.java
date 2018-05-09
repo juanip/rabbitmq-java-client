@@ -21,14 +21,15 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.io.InputStream;
 import java.util.concurrent.TimeoutException;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Envelope;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.client.test.TestUtils;
 
 abstract class AbstractRejectTest extends BrokerTestCase {
 
@@ -53,23 +54,23 @@ abstract class AbstractRejectTest extends BrokerTestCase {
     }
 
     protected long checkDelivery(QueueingConsumer.Delivery d,
-                                 byte[] msg, boolean redelivered)
+                    InputStream msg, boolean redelivered)
     {
         assertNotNull(d);
         return checkDelivery(d.getEnvelope(), d.getBody(), msg, redelivered);
     }
 
-    protected long checkDelivery(GetResponse r, byte[] msg, boolean redelivered)
+    protected long checkDelivery(StreamGetResponse r, InputStream msg, boolean redelivered)
     {
         assertNotNull(r);
         return checkDelivery(r.getEnvelope(), r.getBody(), msg, redelivered);
     }
 
-    protected long checkDelivery(Envelope e, byte[] m,
-                                 byte[] msg, boolean redelivered)
+    protected long checkDelivery(Envelope e, InputStream m,
+                        InputStream msg, boolean redelivered)
     {
         assertNotNull(e);
-        assertTrue(Arrays.equals(m, msg));
+        assertEquals(TestUtils.readStringQuietly(m), TestUtils.readStringQuietly(msg));
         assertEquals(e.isRedeliver(), redelivered);
         return e.getDeliveryTag();
     }

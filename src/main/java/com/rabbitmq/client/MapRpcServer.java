@@ -17,13 +17,14 @@
 package com.rabbitmq.client;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.rabbitmq.client.impl.VolatileFileOutputStream;
 import com.rabbitmq.client.impl.MethodArgumentReader;
 import com.rabbitmq.client.impl.MethodArgumentWriter;
 import com.rabbitmq.client.impl.ValueReader;
@@ -44,34 +45,33 @@ public class MapRpcServer extends RpcServer {
      * Overridden to delegate to handleMapCall.
      */
     @Override
-    public byte[] handleCall(byte[] requestBody, AMQP.BasicProperties replyProperties)
+    public InputStream handleCall(InputStream requestBody, AMQP.BasicProperties replyProperties)
     {
         try {
             return encode(handleMapCall(decode(requestBody), replyProperties));
         } catch (IOException ioe) {
-            return new byte[0];
+            return new ByteArrayInputStream(new byte[0]);
         }
     }
 
-    public static Map<String, Object> decode(byte[] requestBody)
+    public static Map<String, Object> decode(InputStream requestBody)
         throws IOException
     {
         MethodArgumentReader reader =
             new MethodArgumentReader(new ValueReader
-                                     (new DataInputStream
-                                      (new ByteArrayInputStream(requestBody))));
+                                     (new DataInputStream(requestBody)));
         Map<String, Object> request = reader.readTable();
         return request;
     }
 
-    public static byte[] encode(Map<String, Object> reply)
+    public static InputStream encode(Map<String, Object> reply)
         throws IOException
     {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        VolatileFileOutputStream buffer = new VolatileFileOutputStream();
         MethodArgumentWriter writer = new MethodArgumentWriter(new ValueWriter(new DataOutputStream(buffer)));
         writer.writeTable(reply);
         writer.flush();
-        return buffer.toByteArray();
+        return buffer.toInputStream();
     }
 
     /**
@@ -95,7 +95,7 @@ public class MapRpcServer extends RpcServer {
      * Overridden to delegate to handleMapCast.
      */
     @Override
-    public void handleCast(byte[] requestBody)
+    public void handleCast(InputStream requestBody)
     {
         try {
             handleMapCast(decode(requestBody));

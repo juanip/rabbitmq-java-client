@@ -18,7 +18,9 @@ package com.rabbitmq.client.test.functional;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -27,8 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
 
 import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.ReturnListener;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
 
 public class AlternateExchange extends BrokerTestCase
@@ -67,7 +69,7 @@ public class AlternateExchange extends BrokerTestCase
                                          String exchange,
                                          String routingKey,
                                          AMQP.BasicProperties properties,
-                                         byte[] body)
+                                         InputStream body)
                     throws IOException {
                     gotReturn.set(true);
                 }
@@ -130,7 +132,7 @@ public class AlternateExchange extends BrokerTestCase
     protected void checkGet(boolean[] expected) throws IOException {
         for (int i = 0; i < resources.length; i++) {
             String q = resources[i];
-            GetResponse r = channel.basicGet(q, true);
+            StreamGetResponse r = channel.basicGet(q, true);
             assertEquals("check " + q , expected[i], r != null);
         }
     }
@@ -157,8 +159,8 @@ public class AlternateExchange extends BrokerTestCase
         throws IOException {
 
         gotReturn.set(false);
-        channel.basicPublish("x", key, mandatory, false, null,
-                             "ae-test".getBytes());
+        InputStream input = new ByteArrayInputStream("ae-test".getBytes());
+        channel.basicPublish("x", key, mandatory, false, null, input, input.available());
         checkGet(expected);
         assertEquals(ret, gotReturn.get());
     }

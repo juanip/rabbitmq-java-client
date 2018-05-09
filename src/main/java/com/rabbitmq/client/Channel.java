@@ -15,7 +15,9 @@
 
 package com.rabbitmq.client;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
@@ -54,7 +56,7 @@ import com.rabbitmq.client.AMQP.Confirm;
  * @see <a href="http://www.rabbitmq.com/getstarted.html">RabbitMQ tutorials</a>
  * @see <a href="http://www.rabbitmq.com/api-guide.html">RabbitMQ Java Client User Guide</a>
  */
-public interface Channel extends ShutdownNotifier {
+public interface Channel extends ShutdownNotifier, Closeable {
     /**
      * Retrieve this channel's channel number.
      * @return the channel number
@@ -73,7 +75,7 @@ public interface Channel extends ShutdownNotifier {
      *
      * @throws java.io.IOException if an error is encountered
      */
-    void close() throws IOException, TimeoutException;
+    void close() throws IOException;
 
     /**
      * Close this channel.
@@ -268,9 +270,10 @@ public interface Channel extends ShutdownNotifier {
      * @param routingKey the routing key
      * @param props other properties for the message - routing headers etc
      * @param body the message body
+     * @param bodyLength the message body length
      * @throws java.io.IOException if an error is encountered
      */
-    void basicPublish(String exchange, String routingKey, BasicProperties props, byte[] body) throws IOException;
+    void basicPublish(String exchange, String routingKey, BasicProperties props, InputStream body, int bodyLength) throws IOException;
 
     /**
      * Publish a message.
@@ -285,9 +288,10 @@ public interface Channel extends ShutdownNotifier {
      * @param mandatory true if the 'mandatory' flag is to be set
      * @param props other properties for the message - routing headers etc
      * @param body the message body
+     * @param bodyLength the message body length
      * @throws java.io.IOException if an error is encountered
      */
-    void basicPublish(String exchange, String routingKey, boolean mandatory, BasicProperties props, byte[] body)
+    void basicPublish(String exchange, String routingKey, boolean mandatory, BasicProperties props, InputStream body, int bodyLength)
             throws IOException;
 
     /**
@@ -308,10 +312,11 @@ public interface Channel extends ShutdownNotifier {
      * set. Note that the RabbitMQ server does not support this flag.
      * @param props other properties for the message - routing headers etc
      * @param body the message body
+     * @param bodyLength the message body length
      * @throws java.io.IOException if an error is encountered
      */
-    void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, BasicProperties props, byte[] body)
-            throws IOException;
+    void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, BasicProperties props,
+            InputStream body, int bodyLength) throws IOException;
 
     /**
      * Actively declare a non-autodelete, non-durable exchange with no extra arguments
@@ -754,10 +759,10 @@ public interface Channel extends ShutdownNotifier {
      * @param autoAck true if the server should consider messages
      * acknowledged once delivered; false if the server should expect
      * explicit acknowledgements
-     * @return a {@link GetResponse} containing the retrieved message data
+     * @return a {@link StreamGetResponse} containing the retrieved message data
      * @throws java.io.IOException if an error is encountered
      */
-    GetResponse basicGet(String queue, boolean autoAck) throws IOException;
+    StreamGetResponse basicGet(String queue, boolean autoAck) throws IOException;
 
     /**
      * Acknowledge one or several received

@@ -28,9 +28,13 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
 
 import javax.net.ssl.SSLContext;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Map;
@@ -47,10 +51,6 @@ public class BrokerTestCase {
     @Rule
     public TestRule watcher = new TestWatcher() {
         protected void starting(Description description) {
-            LOGGER.info(
-                "Starting test: {}.{} (nio? {})",
-                description.getTestClass().getSimpleName(), description.getMethodName(), TestUtils.USE_NIO
-            );
         }
 
         @Override
@@ -212,7 +212,7 @@ public class BrokerTestCase {
     }
 
     protected void assertDelivered(String q, int count, boolean redelivered) throws IOException {
-        GetResponse r;
+        StreamGetResponse r;
         for (int i = 0; i < count; i++) {
             r = basicGet(q);
             assertNotNull(r);
@@ -221,46 +221,49 @@ public class BrokerTestCase {
         assertNull(basicGet(q));
     }
 
-    protected GetResponse basicGet(String q) throws IOException {
+    protected StreamGetResponse basicGet(String q) throws IOException {
         return channel.basicGet(q, true);
     }
 
     protected void basicPublishPersistent(String q) throws IOException {
-        basicPublishPersistent("persistent message".getBytes(), q);
+        ByteArrayInputStream bai = new ByteArrayInputStream("persistent message".getBytes());
+        basicPublishPersistent(bai, bai.available(), q);
     }
 
-    protected void basicPublishPersistent(byte[] msg, String q) throws IOException {
-        basicPublishPersistent(msg, "", q);
+    protected void basicPublishPersistent(InputStream msg, int length, String q) throws IOException {
+        basicPublishPersistent(msg, length,"", q);
     }
 
     protected void basicPublishPersistent(String x, String routingKey) throws IOException {
-        basicPublishPersistent("persistent message".getBytes(), x, routingKey);
+        ByteArrayInputStream bai = new ByteArrayInputStream("persistent message".getBytes());
+        basicPublishPersistent(bai, bai.available(), x, routingKey);
     }
 
-
-    protected void basicPublishPersistent(byte[] msg, String x, String routingKey) throws IOException {
-        channel.basicPublish(x, routingKey, MessageProperties.PERSISTENT_TEXT_PLAIN, msg);
+    protected void basicPublishPersistent(InputStream msg, int length, String x, String routingKey) throws IOException {
+        channel.basicPublish(x, routingKey, MessageProperties.PERSISTENT_TEXT_PLAIN, msg, length);
     }
 
     protected void basicPublishVolatile(String q) throws IOException {
-        basicPublishVolatile("not persistent message".getBytes(), q);
+        ByteArrayInputStream bai = new ByteArrayInputStream("not persistent message".getBytes());
+        basicPublishVolatile(bai, bai.available(), q);
     }
 
-    protected void basicPublishVolatile(byte[] msg, String q) throws IOException {
-        basicPublishVolatile(msg, "", q);
+    protected void basicPublishVolatile(InputStream msg, int length, String q) throws IOException {
+        basicPublishVolatile(msg, length,"", q);
     }
 
     protected void basicPublishVolatile(String x, String routingKey) throws IOException {
-        basicPublishVolatile("not persistent message".getBytes(), x, routingKey);
+        ByteArrayInputStream bai = new ByteArrayInputStream("not persistent message".getBytes());
+        basicPublishVolatile(bai, bai.available(), x, routingKey);
     }
 
-    protected void basicPublishVolatile(byte[] msg, String x, String routingKey) throws IOException {
-        basicPublishVolatile(msg, x, routingKey, MessageProperties.TEXT_PLAIN);
+    protected void basicPublishVolatile(InputStream msg, int length, String x, String routingKey) throws IOException {
+        basicPublishVolatile(msg, length, x, routingKey, MessageProperties.TEXT_PLAIN);
     }
 
-    public void basicPublishVolatile(byte[] msg, String x, String routingKey,
+    public void basicPublishVolatile(InputStream msg, int length, String x, String routingKey,
                                         AMQP.BasicProperties properties) throws IOException {
-        channel.basicPublish(x, routingKey, properties, msg);
+        channel.basicPublish(x, routingKey, properties, msg, length);
     }
 
     protected void declareAndBindDurableQueue(String q, String x, String r) throws IOException {

@@ -21,7 +21,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -33,7 +35,7 @@ import org.junit.Test;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AMQP.BasicProperties;
-import com.rabbitmq.client.GetResponse;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
 
 public class CcRoutes extends BrokerTestCase  {
@@ -115,7 +117,8 @@ public class CcRoutes extends BrokerTestCase  {
     @Test public void nonArray() throws IOException {
         headers.put("CC", 0);
         propsBuilder.headers(headers);
-        channel.basicPublish("", "queue1", propsBuilder.build(), new byte[0]);
+        InputStream input = new ByteArrayInputStream(new byte[0]);
+        channel.basicPublish("", "queue1", propsBuilder.build(), input, input.available());
         try {
             expect(new String[] {}, false);
             fail();
@@ -132,11 +135,12 @@ public class CcRoutes extends BrokerTestCase  {
             headers.put("BCC", bccList);
         }
         propsBuilder.headers(headers);
-        channel.basicPublish(ex, to, propsBuilder.build(), new byte[0]);
+        InputStream input = new ByteArrayInputStream(new byte[0]);
+        channel.basicPublish(ex, to, propsBuilder.build(), input, input.available());
     }
 
     private void expect(String[] expectedQueues, boolean usedCc) throws IOException {
-        GetResponse getResponse;
+        StreamGetResponse  getResponse;
         List<String> expectedList = Arrays.asList(expectedQueues);
         for (String q : queues) {
             getResponse = basicGet(q);

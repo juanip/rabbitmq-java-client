@@ -25,7 +25,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
 
-import com.rabbitmq.client.GetResponse;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
 import com.rabbitmq.tools.Host;
 
@@ -46,12 +46,12 @@ public class Firehose extends BrokerTestCase {
     @Test public void firehose() throws IOException {
         publishGet("not traced");
         enable();
-        GetResponse msg = publishGet("traced");
+        StreamGetResponse msg = publishGet("traced");
         disable();
         publishGet("not traced");
 
-        GetResponse publish = basicGet(firehose);
-        GetResponse deliver = basicGet(firehose);
+        StreamGetResponse publish = basicGet(firehose);
+        StreamGetResponse deliver = basicGet(firehose);
 
         assertNotNull(publish);
         assertNotNull(deliver);
@@ -64,11 +64,11 @@ public class Firehose extends BrokerTestCase {
         checkHeaders(delHeaders);
         assertNotNull(delHeaders.get("redelivered"));
 
-        assertEquals(msg.getBody().length, publish.getBody().length);
-        assertEquals(msg.getBody().length, deliver.getBody().length);
+        assertEquals(msg.getBody().available(), publish.getBody().available());
+        assertEquals(msg.getBody().available(), deliver.getBody().available());
     }
 
-    private GetResponse publishGet(String key) throws IOException {
+    private StreamGetResponse publishGet(String key) throws IOException {
         basicPublishVolatile("test", key);
         return basicGet(q);
     }

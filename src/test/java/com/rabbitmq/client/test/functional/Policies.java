@@ -28,7 +28,7 @@ import java.util.Set;
 import org.junit.Test;
 
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.GetResponse;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
 import com.rabbitmq.client.test.server.HATests;
 import com.rabbitmq.tools.Host;
@@ -77,7 +77,7 @@ public class Policies extends BrokerTestCase {
         channel.queueBind(dest, "dlx", "");
         basicPublishVolatile(src);
         Thread.sleep(DELAY);
-        GetResponse resp = channel.basicGet(dest, true);
+        StreamGetResponse resp = channel.basicGet(dest, true);
         assertEquals("rk", resp.getEnvelope().getRoutingKey());
         clearPolicies();
 
@@ -97,7 +97,7 @@ public class Policies extends BrokerTestCase {
         channel.queueBind(dest, "dlx2", "");
         basicPublishVolatile(src);
         Thread.sleep(DELAY);
-        GetResponse resp = channel.basicGet(dest, true);
+        StreamGetResponse resp = channel.basicGet(dest, true);
         assertEquals("rk2", resp.getEnvelope().getRoutingKey());
     }
 

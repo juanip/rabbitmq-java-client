@@ -24,12 +24,14 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.DefaultConsumer;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.MessageProperties;
 import com.rabbitmq.client.ShutdownSignalException;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
 import java.util.SortedSet;
@@ -167,7 +169,7 @@ public class Confirm extends BrokerTestCase
         publishN("", "confirm-test-noconsumer", true, false);
 
         for (long i = 0; i < NUM_MESSAGES; i++) {
-            GetResponse resp =
+            StreamGetResponse resp =
                 channel.basicGet("confirm-test-noconsumer", false);
             resp.getEnvelope().getDeliveryTag();
             // not acking
@@ -291,7 +293,7 @@ public class Confirm extends BrokerTestCase
         publishN("", "confirm-test-noconsumer", true, false);
 
         for (long i = 0; i < NUM_MESSAGES; i++) {
-            GetResponse resp =
+            StreamGetResponse resp =
                 channel.basicGet("confirm-test-noconsumer", false);
             long dtag = resp.getEnvelope().getDeliveryTag();
             channel.basicReject(dtag, requeue);
@@ -301,9 +303,10 @@ public class Confirm extends BrokerTestCase
     protected void publish(String exchangeName, String queueName,
                            boolean persistent, boolean mandatory)
         throws IOException {
+        InputStream input = new ByteArrayInputStream("nop".getBytes());
         channel.basicPublish(exchangeName, queueName, mandatory, false,
                              persistent ? MessageProperties.PERSISTENT_BASIC
                                         : MessageProperties.BASIC,
-                             "nop".getBytes());
+                             input, input.available());
     }
 }

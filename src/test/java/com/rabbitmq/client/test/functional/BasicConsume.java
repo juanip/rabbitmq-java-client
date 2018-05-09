@@ -7,7 +7,9 @@ import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.test.BrokerTestCase;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -20,8 +22,10 @@ public class BasicConsume extends BrokerTestCase {
 
     @Test public void basicConsumeOk() throws IOException, InterruptedException {
         String q = channel.queueDeclare().getQueue();
-        basicPublishPersistent("msg".getBytes("UTF-8"), q);
-        basicPublishPersistent("msg".getBytes("UTF-8"), q);
+        InputStream input1 = new ByteArrayInputStream("msg".getBytes("UTF-8"));
+        basicPublishPersistent(input1, input1.available(), q);
+        InputStream input2 = new ByteArrayInputStream("msg".getBytes("UTF-8"));
+        basicPublishPersistent(input2, input2.available(), q);
 
         CountDownLatch latch = new CountDownLatch(2);
         channel.basicConsume(q, new CountDownLatchConsumer(channel, latch));
@@ -40,7 +44,7 @@ public class BasicConsume extends BrokerTestCase {
         }
 
         @Override
-        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
             latch.countDown();
         }
     }

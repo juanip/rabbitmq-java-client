@@ -17,15 +17,16 @@ package com.rabbitmq.client.test.functional;
 
 import static com.rabbitmq.client.test.functional.QosTests.drain;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
 
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
 
 public class PerConsumerPrefetch extends BrokerTestCase {
@@ -126,7 +127,8 @@ public class PerConsumerPrefetch extends BrokerTestCase {
 
     private void publish(String q, int n) throws IOException {
         for (int i = 0; i < n; i++) {
-            channel.basicPublish("", q, null, "".getBytes());
+            ByteArrayInputStream input = new ByteArrayInputStream("".getBytes());
+            channel.basicPublish("", q, null, input, input.available());
         }
     }
 
@@ -139,7 +141,7 @@ public class PerConsumerPrefetch extends BrokerTestCase {
         channel.basicAck(del.getEnvelope().getDeliveryTag(), multi);
     }
 
-    private void ack(GetResponse get, boolean multi) throws IOException {
+    private void ack(StreamGetResponse get, boolean multi) throws IOException {
         channel.basicAck(get.getEnvelope().getDeliveryTag(), multi);
     }
 

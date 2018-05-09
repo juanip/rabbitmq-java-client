@@ -25,6 +25,8 @@ import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.impl.StrictExceptionHandler;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -58,7 +60,8 @@ public class StrictExceptionHandlerTest {
                 new VeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongClassName(
                     channel
                 ));
-            channel.basicPublish("", queue, null, new byte[0]);
+            InputStream input = new ByteArrayInputStream(new byte[0]);
+            channel.basicPublish("", queue, null, input, input.available());
             assertThat(latch.await(5, TimeUnit.SECONDS), is(true));
         } finally {
             if (c != null) {
@@ -76,7 +79,7 @@ public class StrictExceptionHandlerTest {
         }
 
         @Override
-        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
+        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) {
             throw new RuntimeException();
         }
     }

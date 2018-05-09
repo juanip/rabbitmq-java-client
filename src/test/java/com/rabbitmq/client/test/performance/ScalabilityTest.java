@@ -18,6 +18,7 @@ package com.rabbitmq.client.test.performance;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -295,7 +296,7 @@ public class ScalabilityTest {
         channel.addReturnListener(new ReturnListener() {
                 public void handleReturn(int replyCode, String replyText,
                                          String exchange, String routingKey,
-                                         AMQP.BasicProperties properties, byte[] body) throws IOException {
+                                         AMQP.BasicProperties properties, InputStream body) throws IOException {
                     latch.countDown();
                 }
             });
@@ -308,7 +309,7 @@ public class ScalabilityTest {
         for (int n = 0; n < params.messageCount; n ++) {
             String key = routingKeys[r.nextInt(size)];
             channel.basicPublish("amq.direct", key, true, false,
-                                 MessageProperties.MINIMAL_BASIC, null);
+                                 MessageProperties.MINIMAL_BASIC, null, 0);
         }
 
         // wait for the returns to come back

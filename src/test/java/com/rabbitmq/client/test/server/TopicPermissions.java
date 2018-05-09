@@ -22,7 +22,9 @@ import com.rabbitmq.client.test.BrokerTestCase;
 import com.rabbitmq.tools.Host;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeoutException;
 
@@ -63,7 +65,8 @@ public class TopicPermissions extends BrokerTestCase {
         assertAccessOk("Routing key matches on protected topic, should pass", new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                channel.basicPublish(protectedTopic, "a.b.c", null, "content".getBytes());
+                InputStream input = new ByteArrayInputStream("content".getBytes());
+                channel.basicPublish(protectedTopic, "a.b.c", null, input, input.available());
                 channel.basicQos(0);
                 return null;
             }
@@ -71,7 +74,8 @@ public class TopicPermissions extends BrokerTestCase {
         assertAccessRefused("Routing key does not match on protected topic, should not pass", new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                channel.basicPublish(protectedTopic, "b.c", null, "content".getBytes());
+                InputStream input = new ByteArrayInputStream("content".getBytes());
+                channel.basicPublish(protectedTopic, "b.c", null, input, input.available());
                 channel.basicQos(0);
                 return null;
             }
@@ -79,7 +83,8 @@ public class TopicPermissions extends BrokerTestCase {
         assertAccessOk("Message sent on not-protected exchange, should pass", new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                channel.basicPublish(notProtectedTopic, "a.b.c", null, "content".getBytes());
+                InputStream input = new ByteArrayInputStream("content".getBytes());
+                channel.basicPublish(notProtectedTopic, "a.b.c", null, input, input.available());
                 channel.basicQos(0);
                 return null;
             }
@@ -87,7 +92,8 @@ public class TopicPermissions extends BrokerTestCase {
         assertAccessOk("Routing key does not match on protected exchange, but not a topic, should pass", new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                channel.basicPublish(noneTopicExchange, "b.c", null, "content".getBytes());
+                InputStream input = new ByteArrayInputStream("content".getBytes());
+                channel.basicPublish(noneTopicExchange, "b.c", null, input, input.available());
                 channel.basicQos(0);
                 return null;
             }

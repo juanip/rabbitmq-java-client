@@ -19,9 +19,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.MetricsCollector;
 import com.rabbitmq.client.impl.AbstractMetricsCollector;
-import com.rabbitmq.client.impl.MicrometerMetricsCollector;
 import com.rabbitmq.client.impl.StandardMetricsCollector;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -41,7 +39,7 @@ public class MetricsCollectorTest {
         // need to resort to a factory, as this method is called only once
         // if creating the collector instance, it's reused across the test methods
         // and this doesn't work (it cannot be reset)
-        return new Object[] { new StandardMetricsCollectorFactory(), new MicrometerMetricsCollectorFactory() };
+        return new Object[] { new StandardMetricsCollectorFactory()};
     }
 
     @Parameterized.Parameter
@@ -160,35 +158,20 @@ public class MetricsCollectorTest {
     }
 
     long consumedMessages(MetricsCollector metrics) {
-        if (metrics instanceof StandardMetricsCollector) {
             return ((StandardMetricsCollector) metrics).getConsumedMessages().getCount();
-        } else {
-            return (long) ((MicrometerMetricsCollector) metrics).getConsumedMessages().count();
-        }
     }
 
     long acknowledgedMessages(MetricsCollector metrics) {
-        if (metrics instanceof StandardMetricsCollector) {
-            return ((StandardMetricsCollector) metrics).getAcknowledgedMessages().getCount();
-        } else {
-            return (long) ((MicrometerMetricsCollector) metrics).getAcknowledgedMessages().count();
-        }
+       return ((StandardMetricsCollector) metrics).getAcknowledgedMessages().getCount();
+
     }
 
     long connections(MetricsCollector metrics) {
-        if (metrics instanceof StandardMetricsCollector) {
-            return ((StandardMetricsCollector) metrics).getConnections().getCount();
-        } else {
-            return ((MicrometerMetricsCollector) metrics).getConnections().get();
-        }
+        return ((StandardMetricsCollector) metrics).getConnections().getCount();
     }
 
     long channels(MetricsCollector metrics) {
-        if (metrics instanceof StandardMetricsCollector) {
-            return ((StandardMetricsCollector) metrics).getChannels().getCount();
-        } else {
-            return ((MicrometerMetricsCollector) metrics).getChannels().get();
-        }
+        return ((StandardMetricsCollector) metrics).getChannels().getCount();
     }
 
     interface MetricsCollectorFactory {
@@ -201,12 +184,4 @@ public class MetricsCollectorTest {
             return new StandardMetricsCollector();
         }
     }
-
-    static class MicrometerMetricsCollectorFactory implements MetricsCollectorFactory {
-        @Override
-        public AbstractMetricsCollector create() {
-            return new MicrometerMetricsCollector(new SimpleMeterRegistry());
-        }
-    }
-
 }

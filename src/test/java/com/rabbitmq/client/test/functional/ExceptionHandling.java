@@ -18,7 +18,9 @@ package com.rabbitmq.client.test.functional;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -81,11 +83,12 @@ public class ExceptionHandling {
         ch.basicConsume(q, new DefaultConsumer(ch) {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope,
-                                       AMQP.BasicProperties properties, byte[] body) throws IOException {
+                                       AMQP.BasicProperties properties, InputStream body) throws IOException {
                 throw new RuntimeException("exception expected here, don't freak out");
             }
         });
-        ch.basicPublish("", q, null, "".getBytes());
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        ch.basicPublish("", q, null, input, input.available());
         wait(latch);
 
         assertEquals(!expectChannelClose, ch.isOpen());

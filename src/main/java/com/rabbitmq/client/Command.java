@@ -16,6 +16,9 @@
 
 package com.rabbitmq.client;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 /**
  * Interface to a container for an AMQP method-and-arguments, with optional content header and body.
  */
@@ -44,5 +47,5 @@ public interface Command {
      *
      * @return the Command's content body, or null if none
      */
-    byte[] getContentBody();
+    InputStream getContentBody() throws IOException;
 }

@@ -21,7 +21,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,9 +38,9 @@ import org.junit.Test;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Envelope;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
 
 public class QosTests extends BrokerTestCase
@@ -61,8 +63,8 @@ public class QosTests extends BrokerTestCase
         throws IOException
     {
         for (int i = 0; i < n; i++) {
-            channel.basicPublish("amq.fanout", "", null,
-                                 Integer.toString(i).getBytes());
+            ByteArrayInputStream input = new ByteArrayInputStream(Integer.toString(i).getBytes());
+            channel.basicPublish("amq.fanout", "", null, input, input.available());
         }
     }
 
@@ -206,7 +208,7 @@ public class QosTests extends BrokerTestCase
                 @Override public void handleDelivery(String consumerTag,
                                                      Envelope envelope,
                                                      AMQP.BasicProperties properties,
-                                                     byte[] body)
+                                                     InputStream body)
                     throws IOException {
                     counts.put(consumerTag, counts.get(consumerTag) + 1);
                     super.handleDelivery(consumerTag, envelope,
@@ -373,7 +375,7 @@ public class QosTests extends BrokerTestCase
         //is basic.get not limited?
         List<Long> tags = new ArrayList<Long>();
         for (String q : queues) {
-            GetResponse r = channel.basicGet(q, false);
+            StreamGetResponse r = channel.basicGet(q, false);
             assertNotNull(r);
             tags.add(r.getEnvelope().getDeliveryTag());
         }

@@ -16,26 +16,29 @@
 
 package com.rabbitmq.client.test.functional;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.AlreadyClosedException;
+import com.rabbitmq.client.ReturnListener;
+import com.rabbitmq.client.StreamGetResponse;
+import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.utility.BlockingCell;
 
+import org.junit.Test;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-import org.junit.Test;
-
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.AlreadyClosedException;
-import com.rabbitmq.client.GetResponse;
-import com.rabbitmq.client.ReturnListener;
-import com.rabbitmq.client.test.BrokerTestCase;
-import com.rabbitmq.utility.BlockingCell;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 public class Routing extends BrokerTestCase
 {
@@ -67,7 +70,8 @@ public class Routing extends BrokerTestCase
     private void check(String routingKey, boolean expectQ1, boolean expectQ2)
         throws IOException
     {
-        channel.basicPublish(E, routingKey, null, "mrdq".getBytes());
+        InputStream input = new ByteArrayInputStream("mrdq".getBytes());
+        channel.basicPublish(E, routingKey, null, input, input.available());
         checkGet(Q1, expectQ1);
         checkGet(Q2, expectQ2);
     }
@@ -75,7 +79,7 @@ public class Routing extends BrokerTestCase
     private void checkGet(String queue, boolean messageExpected)
         throws IOException
     {
-        GetResponse r = channel.basicGet(queue, true);
+        StreamGetResponse r = channel.basicGet(queue, true);
         if (messageExpected) {
             assertNotNull(r);
         } else {
@@ -111,13 +115,16 @@ public class Routing extends BrokerTestCase
     {
         channel.queueBind(Q1, "amq.topic", "x.#");
         channel.queueBind(Q1, "amq.topic", "#.x");
-        channel.basicPublish("amq.topic", "x.y", null, "x.y".getBytes());
+        InputStream input1 = new ByteArrayInputStream("x.y".getBytes());
+        channel.basicPublish("amq.topic", "x.y", null, input1, input1.available());
         checkGet(Q1, true);
         checkGet(Q1, false);
-        channel.basicPublish("amq.topic", "y.x", null, "y.x".getBytes());
+        InputStream input2 = new ByteArrayInputStream("y.x".getBytes());
+        channel.basicPublish("amq.topic", "y.x", null, input2, input2.available());
         checkGet(Q1, true);
         checkGet(Q1, false);
-        channel.basicPublish("amq.topic", "x.x", null, "x.x".getBytes());
+        InputStream input3 = new ByteArrayInputStream("x.x".getBytes());
+        channel.basicPublish("amq.topic", "x.x", null, input3, input3.available());
         checkGet(Q1, true);
         checkGet(Q1, false);
     }
@@ -133,8 +140,9 @@ public class Routing extends BrokerTestCase
             queues.add(q);
         }
 
+        InputStream input = new ByteArrayInputStream("fanout".getBytes());
         channel.basicPublish("amq.fanout", System.nanoTime() + "",
-                             null, "fanout".getBytes());
+                             null, input, input.available());
 
         for (String q : queues) {
             checkGet(q, true);
@@ -158,7 +166,8 @@ public class Routing extends BrokerTestCase
             queues.add(q);
         }
 
-        channel.basicPublish("amq.topic", "", null, "topic".getBytes());
+        InputStream input = new ByteArrayInputStream("topic".getBytes());
+        channel.basicPublish("amq.topic", "", null, input, input.available());
 
         for (String q : queues) {
             checkGet(q, true);
@@ -177,54 +186,65 @@ public class Routing extends BrokerTestCase
 
         AMQP.BasicProperties.Builder props = new AMQP.BasicProperties.Builder();
 
-        channel.basicPublish("amq.match", "", null, "0".getBytes());
-        channel.basicPublish("amq.match", "", props.build(), "0b".getBytes());
+        InputStream input1 = new ByteArrayInputStream("0".getBytes());
+        channel.basicPublish("amq.match", "", null, input1, input1.available());
+        InputStream input2 = new ByteArrayInputStream("0b".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input2, input2.available());
 
         Map<String, Object> map = new HashMap<String, Object>();
         props.headers(map);
         
         map.clear();
         map.put("h1", "12345");
-        channel.basicPublish("amq.match", "", props.build(), "1".getBytes());
+        InputStream input3 = new ByteArrayInputStream("1".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input3, input3.available());
 
         map.clear();
         map.put("h1", "12345");
-        channel.basicPublish("amq.match", "", props.build(), "1b".getBytes());
+        InputStream input4 = new ByteArrayInputStream("b".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input4, input4.available());
 
         map.clear();
         map.put("h2", "bar");
-        channel.basicPublish("amq.match", "", props.build(), "2".getBytes());
+        InputStream input5 = new ByteArrayInputStream("2".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input5, input5.available());
 
         map.clear();
         map.put("h1", "12345");
         map.put("h2", "bar");
-        channel.basicPublish("amq.match", "", props.build(), "3".getBytes());
+        InputStream input6 = new ByteArrayInputStream("3".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input6, input6.available());
 
         map.clear();
         map.put("h1", "12345");
         map.put("h2", "bar");
         map.put("h3", null);
-        channel.basicPublish("amq.match", "", props.build(), "4".getBytes());
+        InputStream input7 = new ByteArrayInputStream("4".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input7, input7.available());
 
         map.clear();
         map.put("h1", "12345");
         map.put("h2", "quux");
-        channel.basicPublish("amq.match", "", props.build(), "5".getBytes());
+        InputStream input8 = new ByteArrayInputStream("5".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input8, input8.available());
 
         map.clear();
         map.put("h1", "zot");
         map.put("h2", "quux");
         map.put("h3", null);
-        channel.basicPublish("amq.match", "", props.build(), "6".getBytes());
+        InputStream input9 = new ByteArrayInputStream("6".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input9, input9.available());
 
         map.clear();
         map.put("h3", null);
-        channel.basicPublish("amq.match", "", props.build(), "7".getBytes());
+        InputStream input10 = new ByteArrayInputStream("7".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input10, input10.available());
 
         map.clear();
         map.put("h1", "zot");
         map.put("h2", "quux");
-        channel.basicPublish("amq.match", "", props.build(), "8".getBytes());
+        InputStream input11 = new ByteArrayInputStream("8".getBytes());
+        channel.basicPublish("amq.match", "", props.build(), input11, input11.available());
 
         checkGet(Q1, true); // 4
         checkGet(Q1, false);
@@ -245,15 +265,18 @@ public class Routing extends BrokerTestCase
         returnCell = new BlockingCell<Integer>();
 
         //returned 'mandatory' publish
-        channel.basicPublish("", "unknown", true, false, null, "mandatory1".getBytes());
+        InputStream input1 = new ByteArrayInputStream("mandatory1".getBytes());
+        channel.basicPublish("", "unknown", true, false, null, input1, input1.available());
         checkReturn(AMQP.NO_ROUTE);
 
         //routed 'mandatory' publish
-        channel.basicPublish("", Q1, true, false, null, "mandatory2".getBytes());
+        InputStream input2 = new ByteArrayInputStream("mandatory2".getBytes());
+        channel.basicPublish("", Q1, true, false, null, input2, input2.available());
         assertNotNull(channel.basicGet(Q1, true));
 
         //'immediate' publish
-        channel.basicPublish("", Q1, false, true, null, "immediate".getBytes());
+        InputStream input3 = new ByteArrayInputStream("immediate".getBytes());
+        channel.basicPublish("", Q1, false, true, null, input3, input3.available());
         try {
             channel.basicQos(0); //flush
             fail("basic.publish{immediate=true} should not be supported");
@@ -270,7 +293,8 @@ public class Routing extends BrokerTestCase
         returnCell = new BlockingCell<Integer>();
 
         //returned 'mandatory' publish
-        channel.basicPublish("", "unknown", true, false, null, "mandatory1".getBytes());
+        InputStream input1 = new ByteArrayInputStream("mandatory1".getBytes());
+        channel.basicPublish("", "unknown", true, false, null, input1, input1.available());
         try {
             returnCell.uninterruptibleGet(200);
             fail("basic.return issued prior to tx.commit");
@@ -279,13 +303,15 @@ public class Routing extends BrokerTestCase
         checkReturn(AMQP.NO_ROUTE);
 
         //routed 'mandatory' publish
-        channel.basicPublish("", Q1, true, false, null, "mandatory2".getBytes());
+        InputStream input2 = new ByteArrayInputStream("mandatory2".getBytes());
+        channel.basicPublish("", Q1, true, false, null, input2, input2.available());
         channel.txCommit();
         assertNotNull(channel.basicGet(Q1, true));
 
         //returned 'mandatory' publish when message is routable on
         //publish but not on commit
-        channel.basicPublish("", Q1, true, false, null, "mandatory2".getBytes());
+        InputStream input3 = new ByteArrayInputStream("mandatory2".getBytes());
+        channel.basicPublish("", Q1, true, false, null, input3, input3.available());
         channel.queueDelete(Q1);
         channel.txCommit();
         checkReturn(AMQP.NO_ROUTE);
@@ -299,7 +325,7 @@ public class Routing extends BrokerTestCase
                                      String exchange,
                                      String routingKey,
                                      AMQP.BasicProperties properties,
-                                     byte[] body)
+                                     InputStream body)
                 throws IOException {
                 Routing.this.returnCell.set(replyCode);
             }

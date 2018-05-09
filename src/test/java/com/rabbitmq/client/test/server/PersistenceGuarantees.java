@@ -17,7 +17,9 @@ package com.rabbitmq.client.test.server;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import com.rabbitmq.client.impl.nio.NioParams;
 import org.junit.Test;
@@ -66,7 +68,8 @@ public class PersistenceGuarantees extends BrokerTestCase {
 
     private void publish() throws IOException {
         for (int i = 0; i < COUNT; i++) {
-            channel.basicPublish("", queue, false, false, MessageProperties.PERSISTENT_BASIC, "".getBytes());
+            InputStream input = new ByteArrayInputStream("".getBytes());
+            channel.basicPublish("", queue, false, false, MessageProperties.PERSISTENT_BASIC, input, input.available());
         }
     }
 }

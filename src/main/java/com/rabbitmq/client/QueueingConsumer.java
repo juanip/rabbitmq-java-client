@@ -17,6 +17,7 @@
 package com.rabbitmq.client;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -126,7 +127,7 @@ public class QueueingConsumer extends DefaultConsumer {
     @Override public void handleDelivery(String consumerTag,
                                Envelope envelope,
                                AMQP.BasicProperties properties,
-                               byte[] body)
+            InputStream body)
         throws IOException
     {
         checkShutdown();
@@ -139,9 +140,9 @@ public class QueueingConsumer extends DefaultConsumer {
     public static class Delivery {
         private final Envelope _envelope;
         private final AMQP.BasicProperties _properties;
-        private final byte[] _body;
+        private final InputStream _body;
 
-        public Delivery(Envelope envelope, AMQP.BasicProperties properties, byte[] body) {
+        public Delivery(Envelope envelope, AMQP.BasicProperties properties, InputStream body) {
             _envelope = envelope;
             _properties = properties;
             _body = body;
@@ -167,7 +168,7 @@ public class QueueingConsumer extends DefaultConsumer {
          * Retrieve the message body.
          * @return the message body
          */
-        public byte[] getBody() {
+        public InputStream getBody() {
             return _body;
         }
     }

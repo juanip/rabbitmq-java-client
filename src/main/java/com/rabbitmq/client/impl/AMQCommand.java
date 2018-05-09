@@ -15,12 +15,15 @@
 
 package com.rabbitmq.client.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Command;
+import com.sun.corba.se.spi.orbutil.fsm.Input;
 
 /**
  * AMQP 0-9-1-specific implementation of {@link Command} which accumulates
@@ -46,7 +49,7 @@ public class AMQCommand implements Command {
 
     /** Construct a command ready to fill in by reading frames */
     public AMQCommand() {
-        this(null, null, null);
+        this(null, null, null, 0);
     }
 
     /**
@@ -54,7 +57,7 @@ public class AMQCommand implements Command {
      * @param method the wrapped method
      */
     public AMQCommand(com.rabbitmq.client.Method method) {
-        this(method, null, null);
+        this(method, null, null, 0);
     }
 
     /**
@@ -63,8 +66,8 @@ public class AMQCommand implements Command {
      * @param contentHeader the wrapped content header
      * @param body the message body data
      */
-    public AMQCommand(com.rabbitmq.client.Method method, AMQContentHeader contentHeader, byte[] body) {
-        this.assembler = new CommandAssembler((Method) method, contentHeader, body);
+    public AMQCommand(com.rabbitmq.client.Method method, AMQContentHeader contentHeader, InputStream body, int length) {
+        this.assembler = new CommandAssembler((Method) method, contentHeader, body, length);
     }
 
     /** Public API - {@inheritDoc} */
@@ -81,7 +84,7 @@ public class AMQCommand implements Command {
 
     /** Public API - {@inheritDoc} */
     @Override
-    public byte[] getContentBody() {
+    public InputStream getContentBody() throws IOException{
         return this.assembler.getContentBody();
     }
 
@@ -103,22 +106,17 @@ public class AMQCommand implements Command {
             Method m = this.assembler.getMethod();
             connection.writeFrame(m.toFrame(channelNumber));
             if (m.hasContent()) {
-                byte[] body = this.assembler.getContentBody();
-
-                connection.writeFrame(this.assembler.getContentHeader()
-                        .toFrame(channelNumber, body.length));
+                InputStream body = this.assembler.getContentBody();
+                int bodyLength = this.assembler.getBodyLength();
+                connection.writeFrame(this.assembler.getContentHeader().toFrame(channelNumber, bodyLength ));
 
                 int frameMax = connection.getFrameMax();
-                int bodyPayloadMax = (frameMax == 0) ? body.length : frameMax
-                        - EMPTY_FRAME_SIZE;
+                int bodyPayloadMax = (frameMax == 0) ? bodyLength : frameMax - EMPTY_FRAME_SIZE;
 
-                for (int offset = 0; offset < body.length; offset += bodyPayloadMax) {
-                    int remaining = body.length - offset;
-
-                    int fragmentLength = (remaining < bodyPayloadMax) ? remaining
-                            : bodyPayloadMax;
-                    Frame frame = Frame.fromBodyFragment(channelNumber, body,
-                            offset, fragmentLength);
+                byte[] buffer = new byte[bodyPayloadMax];
+                int fragmentLength;
+                while ((fragmentLength = body.read(buffer)) > 0) {
+                    Frame frame = Frame.fromBodyFragment(channelNumber, buffer, 0, fragmentLength);
                     connection.writeFrame(frame);
                 }
             }
@@ -138,22 +136,7 @@ public class AMQCommand implements Command {
                 .append(this.assembler.getMethod())
                 .append(", ")
                 .append(this.assembler.getContentHeader())
-                .append(", ")
-                .append(contentBodyStringBuilder(
-                        this.assembler.getContentBody(), suppressBody))
                 .append('}').toString();
-        }
-    }
-
-    private static StringBuilder contentBodyStringBuilder(byte[] body, boolean suppressBody) {
-        try {
-            if (suppressBody) {
-                return new StringBuilder().append(body.length).append(" bytes of payload");
-            } else {
-                return new StringBuilder().append('\"').append(new String(body, "UTF-8")).append('\"');
-            }
-        } catch (Exception e) {
-            return new StringBuilder().append('|').append(body.length).append('|');
         }
     }
 

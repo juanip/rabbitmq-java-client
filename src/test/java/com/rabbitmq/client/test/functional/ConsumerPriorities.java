@@ -21,7 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -105,7 +107,8 @@ public class ConsumerPriorities extends BrokerTestCase {
 
     private void publish(String queue, int count, String msg) throws IOException {
         for (int i = 0; i < count; i++) {
-            channel.basicPublish("", queue, MessageProperties.MINIMAL_BASIC, msg.getBytes());
+            InputStream input = new ByteArrayInputStream(msg.getBytes());
+            channel.basicPublish("", queue, MessageProperties.MINIMAL_BASIC, input, input.available());
         }
     }
 
@@ -120,8 +123,10 @@ public class ConsumerPriorities extends BrokerTestCase {
         }
 
         @Override
-        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-            messages.add(body);
+        public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
+            byte[] bytes = new byte[body.available()];
+            body.read(bytes);
+            messages.add(bytes);
         }
 
         @Override

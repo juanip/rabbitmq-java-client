@@ -22,7 +22,10 @@ import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -130,12 +133,13 @@ public class NioTlsUnverifiedConnection extends BrokerTestCase {
         channel.queueDeclare(queue, false, false, false, null);
         channel.queuePurge(queue);
 
-        channel.basicPublish("", queue, null, new byte[msgSize]);
+        InputStream input = new ByteArrayInputStream(new byte[msgSize]);
+        channel.basicPublish("", queue, null, input, input.available());
 
         String tag = channel.basicConsume(queue, false, new DefaultConsumer(channel) {
 
             @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                 getChannel().basicAck(envelope.getDeliveryTag(), false);
                 latch.countDown();
             }

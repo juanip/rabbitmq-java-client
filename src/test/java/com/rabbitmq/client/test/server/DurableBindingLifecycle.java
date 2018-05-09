@@ -24,7 +24,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.junit.Test;
 
-import com.rabbitmq.client.GetResponse;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.functional.BindingLifecycleBase;
 import com.rabbitmq.tools.Host;
 
@@ -114,7 +114,7 @@ public class DurableBindingLifecycle extends BindingLifecycleBase {
             basicPublishVolatile(X, K);
         }
 
-        GetResponse response = channel.basicGet(Q, true);
+        StreamGetResponse response = channel.basicGet(Q, true);
         assertNull("The initial response SHOULD BE null", response);
 
         deleteQueue(Q);
@@ -136,7 +136,7 @@ public class DurableBindingLifecycle extends BindingLifecycleBase {
 
         basicPublishVolatile("", Q);
 
-        GetResponse response = channel.basicGet(Q, true);
+        StreamGetResponse response = channel.basicGet(Q, true);
         assertNotNull("The initial response SHOULD NOT be null", response);
 
         deleteQueue(Q);

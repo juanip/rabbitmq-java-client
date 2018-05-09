@@ -24,8 +24,10 @@ import com.rabbitmq.client.test.TestUtils;
 import com.rabbitmq.tools.Host;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.util.*;
 
@@ -251,7 +253,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         });
         closeAndWaitForRecovery();
         block();
-        channel.basicPublish("", "", null, "".getBytes());
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        channel.basicPublish("", "", null, input, input.available());
         unblock();
         wait(latch);
     }
@@ -272,13 +275,14 @@ public class ConnectionRecovery extends BrokerTestCase {
         channel.addReturnListener(new ReturnListener() {
             public void handleReturn(int replyCode, String replyText, String exchange,
                                      String routingKey, AMQP.BasicProperties properties,
-                                     byte[] body) throws IOException {
+                                     InputStream body) throws IOException {
                 latch.countDown();
             }
         });
         closeAndWaitForRecovery();
         expectChannelRecovery(channel);
-        channel.basicPublish("", "unknown", true, false, null, "mandatory1".getBytes());
+        InputStream input = new ByteArrayInputStream("mandatory1".getBytes());
+        channel.basicPublish("", "unknown", true, false, null, input, input.available());
         wait(latch);
     }
 
@@ -374,7 +378,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         ch.confirmSelect();
         ch.queuePurge(q);
         ch.exchangeDeclare(x, "fanout");
-        ch.basicPublish(x, "", null, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        ch.basicPublish(x, "", null, input, input.available());
         waitForConfirms(ch);
         AMQP.Queue.DeclareOk ok = ch.queueDeclare(q, false, false, true, null);
         assertEquals(1, ok.getMessageCount());
@@ -384,15 +389,15 @@ public class ConnectionRecovery extends BrokerTestCase {
 
     // bug 26552
     @Test public void serverNamedTransientAutoDeleteQueueAndBindingRecovery() throws IOException, InterruptedException, TimeoutException {
-        String x   = "tmp-fanout";
+        String x = "tmp-fanout";
         Channel ch = connection.createChannel();
         ch.exchangeDelete(x);
         ch.exchangeDeclare(x, "fanout");
         String q = ch.queueDeclare("", false, false, true, null).getQueue();
         final AtomicReference<String> nameBefore = new AtomicReference<String>(q);
-        final AtomicReference<String> nameAfter  = new AtomicReference<String>();
+        final AtomicReference<String> nameAfter = new AtomicReference<String>();
         final CountDownLatch listenerLatch = new CountDownLatch(1);
-        ((AutorecoveringConnection)connection).addQueueRecoveryListener(new QueueRecoveryListener() {
+        ((AutorecoveringConnection) connection).addQueueRecoveryListener(new QueueRecoveryListener() {
             @Override
             public void queueRecovered(String oldName, String newName) {
                 nameBefore.set(oldName);
@@ -405,7 +410,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         expectChannelRecovery(ch);
         ch.confirmSelect();
         ch.exchangeDeclare(x, "fanout");
-        ch.basicPublish(x, "", null, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        ch.basicPublish(x, "", null, input, input.available());
         waitForConfirms(ch);
         AMQP.Queue.DeclareOk ok = ch.queueDeclarePassive(nameAfter.get());
         assertEquals(1, ok.getMessageCount());
@@ -509,7 +515,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         closeAndWaitForRecovery();
         wait(listenerLatch);
         expectChannelRecovery(channel);
-        channel.basicPublish(x, "", null, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        channel.basicPublish(x, "", null, input, input.available());
         assertDelivered(q, 1);
         assertFalse(nameBefore.get().equals(nameAfter.get()));
         channel.queueDelete(q);
@@ -526,7 +533,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         try {
             closeAndWaitForRecovery();
             expectChannelRecovery(channel);
-            channel.basicPublish(x2, "", null, "msg".getBytes());
+            InputStream input = new ByteArrayInputStream("msg".getBytes());
+            channel.basicPublish(x2, "", null, input, input.available());
             assertDelivered(q, 1);
         } finally {
             channel.exchangeDelete(x2);
@@ -546,7 +554,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         try {
             closeAndWaitForRecovery();
             expectChannelRecovery(channel);
-            channel.basicPublish(x2, "", null, "msg".getBytes());
+            InputStream input = new ByteArrayInputStream("msg".getBytes());
+            channel.basicPublish(x2, "", null, input, input.available());
             assertDelivered(q, 0);
         } finally {
             channel.exchangeDelete(x2);
@@ -566,7 +575,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         try {
             closeAndWaitForRecovery();
             expectChannelRecovery(channel);
-            channel.basicPublish(x2, "", null, "msg".getBytes());
+            InputStream input = new ByteArrayInputStream("msg".getBytes());
+            channel.basicPublish(x2, "", null, input, input.available());
             assertDelivered(q, 0);
         } finally {
             channel.exchangeDelete(x2);
@@ -723,7 +733,7 @@ public class ConnectionRecovery extends BrokerTestCase {
             public void handleDelivery(String consumerTag,
                                        Envelope envelope,
                                        AMQP.BasicProperties properties,
-                                       byte[] body) throws IOException {
+                                       InputStream body) throws IOException {
                 try {
                     if (consumed.intValue() > 0 && consumed.intValue() % 4 == 0) {
                         CountDownLatch recoveryLatch = prepareForRecovery(connection);
@@ -745,7 +755,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         RecoverableConnection publishingConnection = newRecoveringConnection(false);
         Channel publishingChannel = publishingConnection.createChannel();
         for (int i = 0; i < n; i++) {
-            publishingChannel.basicPublish("", q, null, "msg".getBytes());
+            InputStream input = new ByteArrayInputStream("msg".getBytes());
+            publishingChannel.basicPublish("", q, null, input, input.available());
         }
         wait(latch);
         publishingConnection.abort();
@@ -826,7 +837,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         ch.queuePurge(q);
         AMQP.Queue.DeclareOk ok1 = declareClientNamedQueue(ch, q);
         assertEquals(0, ok1.getMessageCount());
-        ch.basicPublish("", q, null, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        ch.basicPublish("", q, null, input, input.available());
         waitForConfirms(ch);
         AMQP.Queue.DeclareOk ok2 = declareClientNamedQueue(ch, q);
         assertEquals(1, ok2.getMessageCount());
@@ -839,7 +851,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         AMQP.Queue.DeclareOk ok1 = declareClientNamedAutoDeleteQueue(ch, q);
         assertEquals(0, ok1.getMessageCount());
         ch.exchangeDeclare(x, "fanout");
-        ch.basicPublish(x, "", null, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        ch.basicPublish(x, "", null, input, input.available());
         waitForConfirms(ch);
         AMQP.Queue.DeclareOk ok2 = declareClientNamedAutoDeleteQueue(ch, q);
         assertEquals(1, ok2.getMessageCount());
@@ -850,7 +863,8 @@ public class ConnectionRecovery extends BrokerTestCase {
         String q = ch.queueDeclare().getQueue();
         final String rk = "routing-key";
         ch.queueBind(q, x, rk);
-        ch.basicPublish(x, rk, null, "msg".getBytes());
+        InputStream input = new ByteArrayInputStream("msg".getBytes());
+        ch.basicPublish(x, rk, null, input, input.available());
         waitForConfirms(ch);
         ch.exchangeDeclarePassive(x);
     }

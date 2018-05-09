@@ -18,7 +18,9 @@ package com.rabbitmq.client.test.server;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -86,6 +88,7 @@ public class BlockedConnection extends BrokerTestCase {
 
     private void publish(Connection connection) throws IOException {
         Channel ch = connection.createChannel();
-        ch.basicPublish("", "", MessageProperties.BASIC, "".getBytes());
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        ch.basicPublish("", "", MessageProperties.BASIC, input, input.available());
     }
 }

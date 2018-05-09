@@ -19,8 +19,12 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
+
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 
@@ -28,7 +32,6 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.ShutdownSignalException;
 
@@ -61,13 +64,14 @@ public abstract class RequeueOnClose
     private void injectMessage()
         throws IOException
     {
+        ByteArrayInputStream input = new ByteArrayInputStream("RequeueOnClose message".getBytes());
         channel.queueDeclare(Q, false, false, false, null);
         channel.queueDelete(Q);
         channel.queueDeclare(Q, false, false, false, null);
-        channel.basicPublish("", Q, null, "RequeueOnClose message".getBytes());
+        channel.basicPublish("", Q, null, input, input.available());
     }
 
-    private GetResponse getMessage()
+    private StreamGetResponse getMessage()
         throws IOException
     {
         return channel.basicGet(Q, false);
@@ -79,7 +83,7 @@ public abstract class RequeueOnClose
         for (int repeat = 0; repeat < count; repeat++) {
             open();
             injectMessage();
-            GetResponse r1 = getMessage();
+            StreamGetResponse r1 = getMessage();
             if (doAck) channel.basicAck(r1.getEnvelope().getDeliveryTag(), false);
             close();
             open();
@@ -138,7 +142,8 @@ public abstract class RequeueOnClose
         channel.queueDelete(Q);
         channel.queueDeclare(Q, false, false, false, null);
         for (int i = 0; i < MESSAGE_COUNT; i++) {
-            channel.basicPublish("", Q, null, "in flight message".getBytes());
+            ByteArrayInputStream input = new ByteArrayInputStream("in flight message".getBytes());
+            channel.basicPublish("", Q, null, input, input.available());
         }
         QueueingConsumer c = new QueueingConsumer(channel);
         channel.basicConsume(Q, c);
@@ -220,7 +225,8 @@ public abstract class RequeueOnClose
         channel.queueDelete(Q);
         channel.queueDeclare(Q, false, false, false, null);
         for (int i = 0; i < MESSAGE_COUNT; i++) {
-            channel.basicPublish("", Q, null, "in flight message".getBytes());
+            ByteArrayInputStream input = new ByteArrayInputStream( "in flight message".getBytes());
+            channel.basicPublish("", Q, null,input, input.available());
         }
 
         CountDownLatch latch = new CountDownLatch(1);
@@ -266,7 +272,7 @@ public abstract class RequeueOnClose
         public void handleDelivery(String consumerTag,
                 Envelope envelope,
                 AMQP.BasicProperties properties,
-                byte[] body)
+                InputStream body)
         throws IOException
         {
             if (this.acknowledge)

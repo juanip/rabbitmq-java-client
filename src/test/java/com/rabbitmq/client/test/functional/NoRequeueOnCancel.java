@@ -20,7 +20,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -44,12 +46,13 @@ public class NoRequeueOnCancel extends BrokerTestCase
     @Test public void noRequeueOnCancel()
         throws IOException, InterruptedException
     {
-        channel.basicPublish("", Q, null, "1".getBytes());
+        ByteArrayInputStream input = new ByteArrayInputStream("1".getBytes());
+        channel.basicPublish("", Q, null, input, input.available());
 
         final CountDownLatch latch = new CountDownLatch(1);
         Consumer c = new DefaultConsumer(channel) {
             @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, InputStream body) throws IOException {
                 latch.countDown();
             }
         };

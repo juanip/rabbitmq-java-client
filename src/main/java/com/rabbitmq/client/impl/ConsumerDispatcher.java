@@ -23,6 +23,7 @@ import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.utility.Utility;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
@@ -140,7 +141,7 @@ final class ConsumerDispatcher {
                                final String consumerTag,
                                final Envelope envelope,
                                final AMQP.BasicProperties properties,
-                               final byte[] body) throws IOException {
+                               final InputStream body) throws IOException {
         executeUnlessShuttingDown(
         new Runnable() {
             @Override

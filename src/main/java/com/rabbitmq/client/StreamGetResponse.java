@@ -1,40 +1,27 @@
-// Copyright (c) 2007-Present Pivotal Software, Inc.  All rights reserved.
-//
-// This software, the RabbitMQ Java client library, is triple-licensed under the
-// Mozilla Public License 1.1 ("MPL"), the GNU General Public License version 2
-// ("GPL") and the Apache License version 2 ("ASL"). For the MPL, please see
-// LICENSE-MPL-RabbitMQ. For the GPL, please see LICENSE-GPL2.  For the ASL,
-// please see LICENSE-APACHE2.
-//
-// This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND,
-// either express or implied. See the LICENSE file for specific language governing
-// rights and limitations of this software.
-//
-// If you have any questions regarding licensing, please contact us at
-// info@rabbitmq.com.
-
 package com.rabbitmq.client;
 
 import com.rabbitmq.client.AMQP.BasicProperties;
+
+import java.io.InputStream;
 
 /**
  * Encapsulates the response from a {@link Channel#basicGet} message-retrieval method call
  * - essentially a static bean "holder" with message response data.
  */
-public class GetResponse {
+public class StreamGetResponse {
     private final Envelope envelope;
     private final BasicProperties props;
-    private final byte[] body;
+    private final InputStream body;
     private final int messageCount;
 
     /**
-     * Construct a {@link GetResponse} with the specified construction parameters
+     * Construct a {@link StreamGetResponse} with the specified construction parameters
      * @param envelope the {@link Envelope}
      * @param props message properties
      * @param body the message body
      * @param messageCount the server's most recent estimate of the number of messages remaining on the queue
      */
-    public GetResponse(Envelope envelope, BasicProperties props, byte[] body, int messageCount)
+    public StreamGetResponse(Envelope envelope, BasicProperties props, InputStream body, int messageCount)
     {
         this.envelope = envelope;
         this.props = props;
@@ -62,7 +49,7 @@ public class GetResponse {
      * Get the message body included in this response
      * @return the message body
      */
-    public byte[] getBody() {
+    public InputStream getBody() {
         return body;
     }
 
@@ -77,7 +64,7 @@ public class GetResponse {
      * include the message being delivered. For example, this field
      * will be zero in the simplest case of a single reader issuing a
      * Basic.Get on a private queue holding a single message (the
-     * message being delivered in this GetResponse).
+     * message being delivered in this StreamGetResponse).
      *
      * @return an estimate of the number of messages remaining to be
      * read from the queue
@@ -89,10 +76,9 @@ public class GetResponse {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("GetResponse(envelope=").append(envelope);
+        sb.append("StreamGetResponse(envelope=").append(envelope);
         sb.append(", props=").append(props);
         sb.append(", messageCount=").append(messageCount);
-        sb.append(", body=(elided, ").append(body.length).append(" bytes long)");
         sb.append(")");
         return sb.toString();
     }

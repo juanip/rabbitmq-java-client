@@ -20,14 +20,17 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.junit.Test;
 
 import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.StreamGetResponse;
 import com.rabbitmq.client.test.BrokerTestCase;
+import com.rabbitmq.client.test.TestUtils;
 
 public abstract class TTLHandling extends BrokerTestCase {
 
@@ -150,15 +153,21 @@ public abstract class TTLHandling extends BrokerTestCase {
         publish(MSG[1]);
         publish(MSG[2]);
 
-        expectBodyAndRemainingMessages(MSG[0], 2);
-        expectBodyAndRemainingMessages(MSG[1], 1);
+        ByteArrayInputStream input0 = new ByteArrayInputStream(MSG[0].getBytes());
+        expectBodyAndRemainingMessages(input0, 2);
+
+        ByteArrayInputStream input1 = new ByteArrayInputStream(MSG[1].getBytes());
+        expectBodyAndRemainingMessages(input1, 1);
 
         closeChannel();
         openChannel();
 
         Thread.sleep(300);
-        expectBodyAndRemainingMessages(MSG[1], 1);
-        expectBodyAndRemainingMessages(MSG[2], 0);
+
+        input1 = new ByteArrayInputStream(MSG[1].getBytes());
+        expectBodyAndRemainingMessages(input1, 1);
+        ByteArrayInputStream input2 = new ByteArrayInputStream(MSG[2].getBytes());
+        expectBodyAndRemainingMessages(input2, 0);
     }
 
     /*
@@ -198,10 +207,10 @@ public abstract class TTLHandling extends BrokerTestCase {
         assertNull(c.nextDelivery(100));
     }
 
-    protected void expectBodyAndRemainingMessages(String body, int messagesLeft) throws IOException {
-        GetResponse response = channel.basicGet(TTL_QUEUE_NAME, false);
+    protected void expectBodyAndRemainingMessages(InputStream body, int messagesLeft) throws IOException {
+        StreamGetResponse response = channel.basicGet(TTL_QUEUE_NAME, false);
         assertNotNull(response);
-        assertEquals(body, new String(response.getBody()));
+        assertEquals(TestUtils.readString(body), TestUtils.readString(response.getBody()));
         assertEquals(messagesLeft, response.getMessageCount());
     }
 
@@ -221,12 +230,16 @@ public abstract class TTLHandling extends BrokerTestCase {
     protected abstract AMQP.Queue.DeclareOk declareQueue(String name, Object ttlValue) throws IOException;
 
     protected String get() throws IOException {
-        GetResponse response = basicGet(TTL_QUEUE_NAME);
-        return response == null ? null : new String(response.getBody());
+        StreamGetResponse response = basicGet(TTL_QUEUE_NAME);
+        if (response == null) {
+            return null;
+        }
+        return TestUtils.readString(response.getBody());
     }
 
     protected void publish(final String msg) throws IOException {
-        basicPublishVolatile(msg.getBytes(), TTL_EXCHANGE, TTL_QUEUE_NAME);
+        ByteArrayInputStream input = new ByteArrayInputStream(msg.getBytes());
+        basicPublishVolatile(input, input.available(), TTL_EXCHANGE, TTL_QUEUE_NAME);
     }
 
     protected void publishAndSync(String msg) throws IOException {

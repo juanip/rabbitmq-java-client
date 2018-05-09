@@ -18,19 +18,21 @@ package com.rabbitmq.client.test.functional;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import org.junit.Test;
 
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.MessageProperties;
+import com.rabbitmq.client.StreamGetResponse;
 
 public class DurableOnTransient extends ClusteredTestBase
 {
     protected static final String Q = "SemiDurableBindings.DurableQueue";
     protected static final String X = "SemiDurableBindings.TransientExchange";
 
-    private GetResponse basicGet()
+    private StreamGetResponse basicGet()
         throws IOException
     {
         return channel.basicGet(Q, true);
@@ -39,9 +41,10 @@ public class DurableOnTransient extends ClusteredTestBase
     private void basicPublish()
         throws IOException
     {
+        InputStream input = new ByteArrayInputStream("persistent message".getBytes());
         channel.basicPublish(X, "",
                              MessageProperties.PERSISTENT_TEXT_PLAIN,
-                             "persistent message".getBytes());
+                             input, input.available());
     }
 
     protected void createResources() throws IOException {
