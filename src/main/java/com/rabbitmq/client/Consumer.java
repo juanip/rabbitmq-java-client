@@ -16,6 +16,7 @@
 package com.rabbitmq.client;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * <p>Interface for application callback objects to receive notifications and messages from
@@ -90,4 +91,19 @@ public interface Consumer {
                         AMQP.BasicProperties properties,
                         byte[] body)
         throws IOException;
+
+    /**
+     * Called when a <code><b>basic.deliver</b></code> is received for this consumer.
+     * @param consumerTag the <i>consumer tag</i> associated with the consumer
+     * @param envelope packaging data for the message
+     * @param properties content header data for the message
+     * @param body
+     * @throws IOException if the consumer encounters an I/O error while processing the message
+     * @see Envelope
+     */
+    void handleDelivery(String consumerTag,
+            Envelope envelope,
+            AMQP.BasicProperties properties,
+            InputStream body)
+            throws IOException;
 }

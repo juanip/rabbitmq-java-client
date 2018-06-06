@@ -449,7 +449,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
             // this way, the message is inside the stats before it is handled
             // in case a manual ack in the callback, the stats will be able to record the ack
             metricsCollector.consumedMessage(this, m.getDeliveryTag(), m.getConsumerTag());
-            this.dispatcher.handleDelivery(callback,
+            this.dispatcher.handleStreamDelivery(callback,
                 m.getConsumerTag(),
                 envelope,
                 (BasicProperties) command.getContentHeader(),
@@ -1169,7 +1169,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
                                              getOk.getExchange(),
                                              getOk.getRoutingKey());
             BasicProperties props = (BasicProperties)replyCommand.getContentHeader();
-            byte[] body = replyCommand.getContentBody();
+            byte[] body = null;//replyCommand.getContentBody();
 
             int messageCount = getOk.getMessageCount();
 

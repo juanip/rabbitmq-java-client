@@ -189,18 +189,22 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     @Override
-    public void basicPublish(String exchange, String routingKey, AMQP.BasicProperties props, InputStream body, int length) throws IOException {
-        delegate.basicPublish(exchange, routingKey, props, body, length);
+    public void basicPublish(String exchange, String routingKey, AMQP.BasicProperties props, byte[] body) throws IOException {
+        delegate.basicPublish(exchange, routingKey, props, body);
     }
 
     @Override
-    public void basicPublish(String exchange, String routingKey, boolean mandatory, AMQP.BasicProperties props, InputStream body, int length) throws IOException {
-        delegate.basicPublish(exchange, routingKey, mandatory, props, body, length);
+    public void basicPublish(String exchange, String routingKey, boolean mandatory, AMQP.BasicProperties props, byte[] body) throws IOException {
+        delegate.basicPublish(exchange, routingKey, mandatory, props, body);
     }
 
     @Override
-    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate,
-            AMQP.BasicProperties props, InputStream body, int bodyLength) throws IOException {
+    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, AMQP.BasicProperties props, byte[] body) throws IOException {
+        delegate.basicPublish(exchange, routingKey, mandatory, immediate, props, body);
+    }
+
+    @Override
+    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, AMQP.BasicProperties props, InputStream body, int bodyLength) throws IOException {
         delegate.basicPublish(exchange, routingKey, mandatory, immediate, props, body, bodyLength);
     }
 
@@ -429,9 +433,15 @@ public class AutorecoveringChannel implements RecoverableChannel {
     }
 
     @Override
-    public StreamGetResponse basicGet(String queue, boolean autoAck) throws IOException {
+    public GetResponse basicGet(String queue, boolean autoAck) throws IOException {
         return delegate.basicGet(queue, autoAck);
     }
+
+    @Override
+    public StreamGetResponse basicStreamGet(String queue, boolean autoAck) throws IOException {
+        return delegate.basicStreamGet(queue, autoAck);
+    }
+
 
     @Override
     public void basicAck(long deliveryTag, boolean multiple) throws IOException {

@@ -23,6 +23,7 @@ import com.rabbitmq.client.ShutdownSignalException;
 import com.rabbitmq.utility.Utility;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
@@ -160,6 +161,32 @@ final class ConsumerDispatcher {
                 }
             }
         });
+    }
+
+    public void handleStreamDelivery(final Consumer delegate,
+            final String consumerTag,
+            final Envelope envelope,
+            final AMQP.BasicProperties properties,
+            final InputStream body) throws IOException {
+        executeUnlessShuttingDown(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            delegate.handleDelivery(consumerTag,
+                                    envelope,
+                                    properties,
+                                    body);
+                        } catch (Throwable ex) {
+                            connection.getExceptionHandler().handleConsumerException(
+                                    channel,
+                                    ex,
+                                    delegate,
+                                    consumerTag,
+                                    "handleDelivery");
+                        }
+                    }
+                });
     }
 
     public CountDownLatch handleShutdownSignal(final Map<String, Consumer> consumers,
