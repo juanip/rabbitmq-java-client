@@ -15,6 +15,7 @@
 
 package com.rabbitmq.client.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -661,20 +662,30 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
     /** Public API - {@inheritDoc} */
     @Override
     public void basicPublish(String exchange, String routingKey,
-                             BasicProperties props, InputStream body, int bodySize)
+                             BasicProperties props, byte[] body)
         throws IOException
     {
-        basicPublish(exchange, routingKey, false, props, body, bodySize);
+        basicPublish(exchange, routingKey, false, props, body);
     }
 
     /** Public API - {@inheritDoc} */
     @Override
     public void basicPublish(String exchange, String routingKey,
                              boolean mandatory,
-                             BasicProperties props, InputStream body, int bodySize)
+                             BasicProperties props, byte[] body)
         throws IOException
     {
-        basicPublish(exchange, routingKey, mandatory, false, props, body, bodySize);
+        basicPublish(exchange, routingKey, mandatory, false, props, body);
+    }
+
+    /** Public API - {@inheritDoc} */
+    @Override
+    public void basicPublish(String exchange, String routingKey,
+                             boolean mandatory, boolean immediate,
+                             BasicProperties props, byte[] body)
+        throws IOException
+    {
+        basicPublish(exchange, routingKey, mandatory, immediate, props, new ByteArrayInputStream(body), body.length);
     }
 
     /** Public API - {@inheritDoc} */
@@ -706,6 +717,7 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
         transmit(command);
         metricsCollector.basicPublish(this);
     }
+
 
 
     /** Public API - {@inheritDoc} */
@@ -1140,7 +1152,40 @@ public class ChannelN extends AMQChannel implements com.rabbitmq.client.Channel 
 
     /** Public API - {@inheritDoc} */
     @Override
-    public StreamGetResponse basicGet(String queue, boolean autoAck)
+    public GetResponse basicGet(String queue, boolean autoAck)
+        throws IOException
+    {
+        validateQueueNameLength(queue);
+        AMQCommand replyCommand = exnWrappingRpc(new Basic.Get.Builder()
+                                                  .queue(queue)
+                                                  .noAck(autoAck)
+                                                 .build());
+        Method method = replyCommand.getMethod();
+
+        if (method instanceof Basic.GetOk) {
+            Basic.GetOk getOk = (Basic.GetOk)method;
+            Envelope envelope = new Envelope(getOk.getDeliveryTag(),
+                                             getOk.getRedelivered(),
+                                             getOk.getExchange(),
+                                             getOk.getRoutingKey());
+            BasicProperties props = (BasicProperties)replyCommand.getContentHeader();
+            byte[] body = replyCommand.getContentBody();
+
+            int messageCount = getOk.getMessageCount();
+
+            metricsCollector.consumedMessage(this, getOk.getDeliveryTag(), autoAck);
+
+            return new GetResponse(envelope, props, body, messageCount);
+        } else if (method instanceof Basic.GetEmpty) {
+            return null;
+        } else {
+            throw new UnexpectedMethodError(method);
+        }
+    }
+
+    /** Public API - {@inheritDoc} */
+    @Override
+    public StreamGetResponse basicStreamGet(String queue, boolean autoAck)
         throws IOException
     {
         validateQueueNameLength(queue);

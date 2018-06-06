@@ -31,12 +31,6 @@ import java.util.concurrent.TimeoutException;
  * @since 3.3.0
  */
 public class AutorecoveringChannel implements RecoverableChannel {
-    @Override
-    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate,
-            AMQP.BasicProperties props, InputStream body, int bodyLength) throws IOException {
-        delegate.basicPublish(exchange, routingKey, mandatory, immediate, props, body, bodyLength);
-    }
-
     private volatile RecoveryAwareChannelN delegate;
     private volatile AutorecoveringConnection connection;
     private final List<ShutdownListener> shutdownHooks  = new CopyOnWriteArrayList<ShutdownListener>();
@@ -202,6 +196,12 @@ public class AutorecoveringChannel implements RecoverableChannel {
     @Override
     public void basicPublish(String exchange, String routingKey, boolean mandatory, AMQP.BasicProperties props, InputStream body, int length) throws IOException {
         delegate.basicPublish(exchange, routingKey, mandatory, props, body, length);
+    }
+
+    @Override
+    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate,
+            AMQP.BasicProperties props, InputStream body, int bodyLength) throws IOException {
+        delegate.basicPublish(exchange, routingKey, mandatory, immediate, props, body, bodyLength);
     }
 
     @Override

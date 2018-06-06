@@ -16,9 +16,7 @@
 
 package com.rabbitmq.client;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * Class which manages a request queue for a simple RPC-style service.
@@ -149,9 +147,9 @@ public class RpcServer {
             AMQP.BasicProperties.Builder replyPropertiesBuilder
                 = new AMQP.BasicProperties.Builder().correlationId(correlationId);
             AMQP.BasicProperties replyProperties = preprocessReplyProperties(request, replyPropertiesBuilder);
-            InputStream replyBody = handleCall(request, replyProperties);
+            byte[] replyBody = handleCall(request, replyProperties);
             replyProperties = postprocessReplyProperties(request, replyProperties.builder());
-            _channel.basicPublish("", replyTo, replyProperties, replyBody, replyBody.available());
+            _channel.basicPublish("", replyTo, replyProperties, replyBody);
         } else {
             handleCast(request);
         }
@@ -161,7 +159,7 @@ public class RpcServer {
      * Lowest-level response method. Calls
      * handleCall(AMQP.BasicProperties,byte[],AMQP.BasicProperties).
      */
-    public InputStream handleCall(QueueingConsumer.Delivery request,
+    public byte[] handleCall(QueueingConsumer.Delivery request,
                              AMQP.BasicProperties replyProperties)
     {
         return handleCall(request.getProperties(),
@@ -173,8 +171,8 @@ public class RpcServer {
      * Mid-level response method. Calls
      * handleCall(byte[],AMQP.BasicProperties).
      */
-    public InputStream handleCall(AMQP.BasicProperties requestProperties,
-                             InputStream requestBody,
+    public byte[] handleCall(AMQP.BasicProperties requestProperties,
+                             byte[] requestBody,
                              AMQP.BasicProperties replyProperties)
     {
         return handleCall(requestBody, replyProperties);
@@ -185,10 +183,10 @@ public class RpcServer {
      * default - override this (or other handleCall and handleCast
      * methods) in subclasses.
      */
-    public InputStream handleCall(InputStream requestBody,
+    public byte[] handleCall(byte[] requestBody,
                              AMQP.BasicProperties replyProperties)
     {
-        return new ByteArrayInputStream(new byte[0]);
+        return new byte[0];
     }
 
     /**
@@ -225,7 +223,7 @@ public class RpcServer {
      * Mid-level handler method. Calls
      * handleCast(byte[]).
      */
-    public void handleCast(AMQP.BasicProperties requestProperties, InputStream requestBody)
+    public void handleCast(AMQP.BasicProperties requestProperties, byte[] requestBody)
     {
         handleCast(requestBody);
     }
@@ -235,7 +233,7 @@ public class RpcServer {
      * this (or other handleCast and handleCast methods) in
      * subclasses.
      */
-    public void handleCast(InputStream requestBody)
+    public void handleCast(byte[] requestBody)
     {
         // Does nothing.
     }

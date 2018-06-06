@@ -270,10 +270,9 @@ public interface Channel extends ShutdownNotifier, Closeable {
      * @param routingKey the routing key
      * @param props other properties for the message - routing headers etc
      * @param body the message body
-     * @param bodyLength the message body length
      * @throws java.io.IOException if an error is encountered
      */
-    void basicPublish(String exchange, String routingKey, BasicProperties props, InputStream body, int bodyLength) throws IOException;
+    void basicPublish(String exchange, String routingKey, BasicProperties props, byte[] body) throws IOException;
 
     /**
      * Publish a message.
@@ -288,10 +287,32 @@ public interface Channel extends ShutdownNotifier, Closeable {
      * @param mandatory true if the 'mandatory' flag is to be set
      * @param props other properties for the message - routing headers etc
      * @param body the message body
-     * @param bodyLength the message body length
      * @throws java.io.IOException if an error is encountered
      */
-    void basicPublish(String exchange, String routingKey, boolean mandatory, BasicProperties props, InputStream body, int bodyLength)
+    void basicPublish(String exchange, String routingKey, boolean mandatory, BasicProperties props, byte[] body)
+            throws IOException;
+
+    /**
+     * Publish a message.
+     *
+     * Publishing to a non-existent exchange will result in a channel-level
+     * protocol exception, which closes the channel.
+     *
+     * Invocations of <code>Channel#basicPublish</code> will eventually block if a
+     * <a href="http://www.rabbitmq.com/alarms.html">resource-driven alarm</a> is in effect.
+     *
+     * @see com.rabbitmq.client.AMQP.Basic.Publish
+     * @see <a href="http://www.rabbitmq.com/alarms.html">Resource-driven alarms</a>
+     * @param exchange the exchange to publish the message to
+     * @param routingKey the routing key
+     * @param mandatory true if the 'mandatory' flag is to be set
+     * @param immediate true if the 'immediate' flag is to be
+     * set. Note that the RabbitMQ server does not support this flag.
+     * @param props other properties for the message - routing headers etc
+     * @param body the message body
+     * @throws java.io.IOException if an error is encountered
+     */
+    void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, BasicProperties props, byte[] body)
             throws IOException;
 
     /**
@@ -759,10 +780,24 @@ public interface Channel extends ShutdownNotifier, Closeable {
      * @param autoAck true if the server should consider messages
      * acknowledged once delivered; false if the server should expect
      * explicit acknowledgements
+     * @return a {@link GetResponse} containing the retrieved message data
+     * @throws java.io.IOException if an error is encountered
+     */
+    GetResponse basicGet(String queue, boolean autoAck) throws IOException;
+
+    /**
+     * Retrieve a message from a queue using {@link com.rabbitmq.client.AMQP.Basic.Get}
+     * @see com.rabbitmq.client.AMQP.Basic.Get
+     * @see com.rabbitmq.client.AMQP.Basic.GetOk
+     * @see com.rabbitmq.client.AMQP.Basic.GetEmpty
+     * @param queue the name of the queue
+     * @param autoAck true if the server should consider messages
+     * acknowledged once delivered; false if the server should expect
+     * explicit acknowledgements
      * @return a {@link StreamGetResponse} containing the retrieved message data
      * @throws java.io.IOException if an error is encountered
      */
-    StreamGetResponse basicGet(String queue, boolean autoAck) throws IOException;
+    StreamGetResponse basicStreamGet(String queue, boolean autoAck) throws IOException;
 
     /**
      * Acknowledge one or several received

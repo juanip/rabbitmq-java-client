@@ -15,7 +15,6 @@
 
 package com.rabbitmq.client.impl;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -23,7 +22,6 @@ import java.io.InputStream;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Command;
-import com.sun.corba.se.spi.orbutil.fsm.Input;
 
 /**
  * AMQP 0-9-1-specific implementation of {@link Command} which accumulates

@@ -16,7 +16,6 @@
 package com.rabbitmq.client;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * <p>Interface for application callback objects to receive notifications and messages from
@@ -89,6 +88,6 @@ public interface Consumer {
     void handleDelivery(String consumerTag,
                         Envelope envelope,
                         AMQP.BasicProperties properties,
-                        InputStream body)
+                        byte[] body)
         throws IOException;
 }

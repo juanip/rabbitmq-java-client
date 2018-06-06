@@ -16,27 +16,23 @@
 
 package com.rabbitmq.client;
 
-import com.rabbitmq.client.impl.VolatileFileOutputStream;
-import com.rabbitmq.client.impl.MethodArgumentReader;
-import com.rabbitmq.client.impl.MethodArgumentWriter;
-import com.rabbitmq.client.impl.ValueReader;
-import com.rabbitmq.client.impl.ValueWriter;
-import com.rabbitmq.utility.BlockingCell;
-
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeoutException;
+
+import com.rabbitmq.client.impl.MethodArgumentReader;
+import com.rabbitmq.client.impl.MethodArgumentWriter;
+import com.rabbitmq.client.impl.ValueReader;
+import com.rabbitmq.client.impl.ValueWriter;
+import com.rabbitmq.utility.BlockingCell;
 
 /**
  * Convenience class which manages simple RPC-style communication.
@@ -190,7 +186,7 @@ public class RpcClient {
             public void handleDelivery(String consumerTag,
                                        Envelope envelope,
                                        AMQP.BasicProperties properties,
-                                       InputStream body)
+                                       byte[] body)
                     throws IOException {
                 synchronized (_continuationMap) {
                     String replyId = properties.getCorrelationId();
@@ -206,18 +202,18 @@ public class RpcClient {
         return consumer;
     }
 
-    public void publish(AMQP.BasicProperties props, InputStream message, int messageLength)
+    public void publish(AMQP.BasicProperties props, byte[] message)
         throws IOException
     {
-        _channel.basicPublish(_exchange, _routingKey, props, message, messageLength);
+        _channel.basicPublish(_exchange, _routingKey, props, message);
     }
 
-    public Response doCall(AMQP.BasicProperties props, InputStream message, int messageLength)
+    public Response doCall(AMQP.BasicProperties props, byte[] message)
         throws IOException, TimeoutException {
-        return doCall(props, message, messageLength, _timeout);
+        return doCall(props, message, _timeout);
     }
 
-    public Response doCall(AMQP.BasicProperties props, InputStream message, int messageLength, int timeout)
+    public Response doCall(AMQP.BasicProperties props, byte[] message, int timeout)
         throws IOException, ShutdownSignalException, TimeoutException {
         checkConsumer();
         BlockingCell<Object> k = new BlockingCell<Object>();
@@ -228,7 +224,7 @@ public class RpcClient {
                 .correlationId(replyId).replyTo(_replyTo).build();
             _continuationMap.put(replyId, k);
         }
-        publish(props, message, messageLength);
+        publish(props, message);
         Object reply = k.uninterruptibleGet(timeout);
         if (reply instanceof ShutdownSignalException) {
             ShutdownSignalException sig = (ShutdownSignalException) reply;
@@ -244,13 +240,13 @@ public class RpcClient {
         }
     }
 
-    public InputStream primitiveCall(AMQP.BasicProperties props, InputStream message)
+    public byte[] primitiveCall(AMQP.BasicProperties props, byte[] message)
         throws IOException, ShutdownSignalException, TimeoutException
     {
         return primitiveCall(props, message, _timeout);
     }
 
-    public InputStream primitiveCall(AMQP.BasicProperties props, InputStream message, int timeout)
+    public byte[] primitiveCall(AMQP.BasicProperties props, byte[] message, int timeout)
         throws IOException, ShutdownSignalException, TimeoutException
     {
         return doCall(props, message, timeout).getBody();
@@ -264,7 +260,7 @@ public class RpcClient {
      * @throws IOException if an error is encountered
      * @throws TimeoutException if a response is not received within the configured timeout
      */
-    public InputStream primitiveCall(InputStream message)
+    public byte[] primitiveCall(byte[] message)
         throws IOException, ShutdownSignalException, TimeoutException {
         return primitiveCall(null, message);
     }
@@ -280,7 +276,7 @@ public class RpcClient {
      * @throws IOException if an error is encountered
      * @throws TimeoutException if a response is not received within the configured timeout
      */
-    public Response responseCall(InputStream message) throws IOException, ShutdownSignalException, TimeoutException {
+    public Response responseCall(byte[] message) throws IOException, ShutdownSignalException, TimeoutException {
         return responseCall(message, _timeout);
     }
 
@@ -296,7 +292,7 @@ public class RpcClient {
      * @throws IOException if an error is encountered
      * @throws TimeoutException if a response is not received within the configured timeout
      */
-    public Response responseCall(InputStream message, int timeout) throws IOException, ShutdownSignalException, TimeoutException {
+    public Response responseCall(byte[] message, int timeout) throws IOException, ShutdownSignalException, TimeoutException {
         return doCall(null, message, timeout);
     }
 
@@ -312,37 +308,17 @@ public class RpcClient {
     public String stringCall(String message)
         throws IOException, ShutdownSignalException, TimeoutException
     {
-        InputStream request = null;
-        InputStream reply = null;
+        byte[] request;
         try {
-            request = new ByteArrayInputStream(message.getBytes(StringRpcServer.STRING_ENCODING));
-            reply = primitiveCall(request);
+            request = message.getBytes(StringRpcServer.STRING_ENCODING);
+        } catch (IOException _e) {
+            request = message.getBytes();
         }
-        finally {
-            if (request != null) {
-                request.close();
-            }
-
-        }
-
-        return convertToString(reply);
-    }
-
-    private static String convertToString(final InputStream is) throws IOException{
-        final StringBuilder out = new StringBuilder();
-        Reader reader = null;
+        byte[] reply = primitiveCall(request);
         try {
-            reader = new BufferedReader(new InputStreamReader(is, StringRpcServer.STRING_ENCODING));
-            int c;
-            while ((c = reader.read()) != -1) {
-                out.append((char) c);
-            }
-            return out.toString();
-        }
-        finally {
-            if (reader != null) {
-                reader.close();
-            }
+            return new String(reply, StringRpcServer.STRING_ENCODING);
+        } catch (IOException _e) {
+           return new String(reply);
         }
     }
 
@@ -362,13 +338,13 @@ public class RpcClient {
     public Map<String, Object> mapCall(Map<String, Object> message)
         throws IOException, ShutdownSignalException, TimeoutException
     {
-        VolatileFileOutputStream buffer = new VolatileFileOutputStream();
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         MethodArgumentWriter writer = new MethodArgumentWriter(new ValueWriter(new DataOutputStream(buffer)));
         writer.writeTable(message);
         writer.flush();
-        InputStream reply = primitiveCall(buffer.toInputStream());
+        byte[] reply = primitiveCall(buffer.toByteArray());
         MethodArgumentReader reader =
-            new MethodArgumentReader(new ValueReader(new DataInputStream(reply)));
+            new MethodArgumentReader(new ValueReader(new DataInputStream(new ByteArrayInputStream(reply))));
         return reader.readTable();
     }
 
@@ -450,14 +426,14 @@ public class RpcClient {
         protected String consumerTag;
         protected Envelope envelope;
         protected AMQP.BasicProperties properties;
-        protected InputStream body;
+        protected byte[] body;
 
         public Response() {
         }
 
         public Response(
             final String consumerTag, final Envelope envelope, final AMQP.BasicProperties properties,
-            final InputStream body) {
+            final byte[] body) {
             this.consumerTag = consumerTag;
             this.envelope = envelope;
             this.properties = properties;
@@ -476,7 +452,7 @@ public class RpcClient {
             return properties;
         }
 
-        public InputStream getBody() {
+        public byte[] getBody() {
             return body;
         }
     }
